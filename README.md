@@ -38,6 +38,12 @@ python examples/run_2d_drift.py
 
 Snapshots are written to `outputs/state_t{1000,2000,3000}.png`. This uses the original symmetric two-Gaussian stream — good for eyeballing that splitting/pruning/clustering behave sanely, but by design its two clusters are equally easy to resolve at any fixed resolution, so it **cannot discriminate between methods**. That's what the frontier sweep below is for.
 
+| t=1000 | t=2000 | t=3000 |
+|---|---|---|
+| ![t=1000](outputs/state_t1000.png) | ![t=2000](outputs/state_t2000.png) | ![t=3000](outputs/state_t3000.png) |
+
+Grid lines show the current leaf partition; numbered boxes are dense cells with their assigned cluster id. The grid is coarse where the (broad, sparse) cluster sits and refines sharply around the (tight, dense) cluster — and re-refines as both drift across frames.
+
 Run the actual evaluation — generate the adversarial varying-density stream, sweep a fixed-resolution D-Stream over 10 grid sizes, place `AdaptiveDStream` and three imported baselines on the same accuracy-vs-memory plot:
 
 ```bash
