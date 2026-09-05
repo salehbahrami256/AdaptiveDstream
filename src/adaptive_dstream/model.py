@@ -52,7 +52,10 @@ class AdaptiveDStream:
 
     def _find_leaf(self, x: np.ndarray) -> GridCell:
         if not self.root.contains(x):
-            raise ValueError(f"Point {x} outside domain [{self.lower}, {self.upper}].")
+            # Unbounded distributions (e.g. Gaussian tails) will occasionally
+            # land outside any finite domain box; clip to the boundary and
+            # assign to the nearest edge cell rather than raising.
+            x = np.clip(x, self.lower, self.upper)
         node = self.root
         while not node.is_leaf:
             hits = [c for c in node.children if c.contains(x)]
@@ -74,8 +77,9 @@ class AdaptiveDStream:
 
         self.t = int(t)
         self.n_seen += 1
-        leaf = self._find_leaf(x)
-        leaf.update(x, self.t, self.decay)
+        x_clipped = np.clip(x, self.lower, self.upper)
+        leaf = self._find_leaf(x_clipped)
+        leaf.update(x_clipped, self.t, self.decay)
 
         if self._should_split(leaf):
             self._split(leaf)
