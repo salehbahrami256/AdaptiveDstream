@@ -55,6 +55,8 @@ This writes:
 - `outputs/frontier_results.json` — every metric for every model.
 - `outputs/frontier_ari_vs_memory.png`, `outputs/frontier_nmi_vs_memory.png` — the frontier plots.
 
+Both examples default to `dim=2` — deliberately, since the headline results above and the grid-partition visualization are both 2D — but every stream generator, `AdaptiveDStream` itself, and the evaluation harness are dimension-generic. Pass `--dim` to try another dimension, e.g. `python examples/run_2d_drift.py --dim 3`; see [Higher dimensions](#higher-dimensions) for what changes (and what doesn't) as `dim` grows.
+
 ## Method
 
 - **One-pass online updates.** Each point updates the sufficient statistics (`s0`, `s1`, `s2` — decayed count, sum, sum-of-squares) of the leaf cell it falls in.
@@ -72,7 +74,7 @@ This writes:
 
 `make_varying_density_stream` (in [synthetic.py](src/adaptive_dstream/synthetic.py)) generates two clusters that are *always both present*: a tight one (`dense_std`, default `0.18`) and a broad one (`sparse_std`, default `1.6`), each getting roughly half the points at every time step. Both centers drift across `n_phases` (default 3). This is the case a single global cell size provably cannot win — pick a cell small enough for the tight cluster and most of the broad cluster's cells fall below any reasonable density threshold; pick a cell large enough for the broad cluster and the tight cluster is a handful of oversized cells with no internal resolution.
 
-Two other generators exist for variety: `make_drifting_stream` (the original symmetric two-Gaussian stream — kept for the quickstart visualization, not for comparing methods) and `make_moons_stream` (non-convex, non-Gaussian "two moons" shape, rotating and drifting, via `sklearn.datasets.make_moons`). All three share the signature `generate_stream(kind, n_samples, random_state, **kwargs)`.
+Two other generators exist for variety: `make_drifting_stream` (the original symmetric two-Gaussian stream — kept for the quickstart visualization, not for comparing methods) and `make_moons_stream` (non-convex, non-Gaussian "two moons" shape, rotating and drifting, via `sklearn.datasets.make_moons`). All three share the signature `generate_stream(kind, n_samples, random_state, **kwargs)` and now take a `dim` keyword (default 2, exactly reproducing the original streams bit-for-bit); for `dim != 2` the cluster centers orbit the origin in the leading one or two axes (`synthetic._orbit_centers`) so the "always separated, drifting" shape generalizes to any dimension, with `make_moons_stream` requiring `dim >= 2` since the moon shape itself is inherently 2D. See [Higher dimensions](#higher-dimensions).
 
 ### Unassigned points: the scoring rule, decided and documented
 
@@ -101,7 +103,7 @@ The one thing written from scratch is `FixedGridDStream` — a classic, non-adap
 
 ## Results so far
 
-*(2D only, per the current focus — the method and harness are dimension-generic, but higher dimensions are future work.)*
+*(2D, per the current focus — the method and harness are dimension-generic, and a first, preliminary look at higher dimensions is in [Higher dimensions](#higher-dimensions) below.)*
 
 Stream: `make_varying_density_stream`, `n_samples=4000`, `seed=7` (reproducible from `data/varying_density_seed7.json`). Fixed-resolution D-Stream swept at `n_cells_per_dim ∈ {2,3,4,6,8,11,16,22,32,45}`. Full numbers in `outputs/frontier_results.json`.
 
@@ -130,6 +132,45 @@ Stream: `make_varying_density_stream`, `n_samples=4000`, `seed=7` (reproducible 
 
 Both point the same direction: the fix isn't the splitting heuristic itself, it's making the dense/sparse rule and memory accounting resolution-aware. See [Known limitations](#known-limitations).
 
+## Higher dimensions
+
+*(Preliminary: one seed, hyperparameters not retuned per dimension, and every dimension beyond the first two is pure uninformative noise by construction — see caveats below. Not a replacement for the 2D headline result above.)*
+
+The core model was already dimension-generic (`GridCell`/`AdaptiveDStream` use `2**d` children and per-axis bounds throughout, unchanged here); what's new is that the stream generators, evaluation harness, and visualization now actually exercise `dim != 2`. `examples/run_dimension_sweep.py` tests the natural follow-up question this raises: does `AdaptiveDStream`'s standing relative to a fixed grid improve as dimension grows? A fixed grid's cell count is `n_cells_per_dim ** dim` — exponential, paid unconditionally regardless of where the data is — while `AdaptiveDStream` only refines where the data needs it and is hard-capped at `max_cells`.
+
+Same `varying_density` stream as the headline result (`n_samples=2500`, `seed=7`), generalized so the two cluster centers orbit in the first two coordinates and every additional dimension is pure isotropic noise (the standard curse-of-dimensionality stress case, not an easier or harder version of the clustering problem). At each dimension, the fixed grid's `n_cells_per_dim` is chosen so its total cell count lands near a ~2,500-cell budget — the same order as `AdaptiveDStream`'s `max_cells=2500` — so this compares the two models at roughly matched memory rather than matched raw resolution.
+
+![Peak memory vs dimension](outputs/dimension_sweep_memory.png)
+![ARI vs dimension](outputs/dimension_sweep_ari.png)
+
+| Dim | Model | Cells | Peak memory | ARI | NMI |
+|---:|---|---:|---:|---:|---:|
+| 2 | FixedGrid (n=50) | 2,500 | 1930.8 KB | 0.627 | 0.577 |
+| 2 | **AdaptiveDStream** | 850 | **870.7 KB** | 0.074 | 0.104 |
+| 3 | FixedGrid (n=14) | 2,744 | 2200.3 KB | 0.653 | 0.629 |
+| 3 | **AdaptiveDStream** | 1,296 | **1183.9 KB** | 0.015 | 0.057 |
+| 4 | FixedGrid (n=7) | 2,401 | 2002.0 KB | 0.465 | 0.418 |
+| 4 | **AdaptiveDStream** | 1,966 | **1742.7 KB** | 0.020 | 0.073 |
+| 5 | FixedGrid (n=5) | 3,125 | 2701.2 KB | 0.496 | 0.476 |
+| 5 | **AdaptiveDStream** | 2,481 | **2205.4 KB** | 0.050 | 0.096 |
+| 6 | FixedGrid (n=4) | 4,096 | 3666.8 KB | 0.328 | 0.308 |
+| 6 | **AdaptiveDStream** | 2,458 | **2227.1 KB** | 0.043 | 0.076 |
+| 8 | FixedGrid (n=3) | 6,561 | 6284.7 KB | 0.520 | 0.511 |
+| 8 | **AdaptiveDStream** | 2,296 | **2205.4 KB** | 0.210 | 0.185 |
+| 10 | FixedGrid (n=2) | 1,024 | 1047.6 KB | 0.486 | 0.495 |
+| 10 | **AdaptiveDStream** | 2,047 | **2093.0 KB** | 0.291 | 0.258 |
+
+Full numbers in `outputs/dimension_sweep_results.json`.
+
+**Part of the memory hypothesis holds; the accuracy gap narrows but never closes.**
+
+- **Memory: `AdaptiveDStream` stays flat, the budget-matched fixed grid does not.** From dim 2 to 8, `AdaptiveDStream` uses 35–87% of the fixed grid's memory (870 KB vs 1931 KB at dim=2, widening to 2205 KB vs 6285 KB at dim=8) and plateaus near its `max_cells` cap, while the fixed grid keeps climbing. The dim=8 fixed-grid number exposes a sharper problem than just "more memory": at high dimension, `n_cells_per_dim` only moves in coarse integer steps, and each step is a `(n+1)**dim / n**dim` multiplicative jump in total cells — going from `n=2` (256 cells) to `n=3` (6,561 cells) at dim=8 overshoots the 2,500-cell target by 2.6x because there's no integer resolution in between. A fixed grid doesn't just cost more in high dimensions; past a point it stops being tunable to a given memory budget at all. (At dim=10 the fixed grid drops *under* budget instead — 1048 KB vs 2093 KB — only because `n_cells_per_dim` bottoms out at 2, not because it became more efficient.)
+- **Accuracy: `AdaptiveDStream` is dominated at every dimension tested, exactly as in the 2D headline result — but the gap narrows sharply at high dimension.** Its ARI is 2–13% of the fixed grid's for dim 2–6, then jumps to 40% (dim=8) and 60% (dim=10). This is consistent with the already-documented root cause (see [Known limitations](#known-limitations)): the absolute, non-volume-normalized dense threshold makes `AdaptiveDStream` under-classify dense regions once split, and a split fragments mass across `2**dim` children — a far harsher penalty at dim=8 (256-way) than at dim=2 (4-way). The fixed grid's own ARI also degrades with dimension (uninformative noise dimensions dilute Euclidean-adjacency clustering for both models), so part of `AdaptiveDStream`'s improving relative standing is the baseline getting worse, not only `AdaptiveDStream` getting better.
+
+**Caveats, so this isn't overread:** single seed, `n_samples=2500` (smaller than the 2D headline's 4000), and neither model's `dense_threshold`/`sparse_threshold` was retuned per dimension — both remain absolute decayed counts, so the known limitation above is a confound here, not something this experiment isolates from. Read this as "the memory hypothesis holds and is worth building on, the accuracy question is still open," not as a validated high-dimensional result.
+
+Reproduce with `python examples/run_dimension_sweep.py`.
+
 ## Known limitations
 
 - **Dense-threshold is an absolute decayed count, not normalized by cell volume.** This is the most consequential current limitation. Splitting a cell fragments its mass across `2**d` smaller children; a region can be genuinely dense (high mass *per unit volume*) while every individual fine cell covering it holds too little raw count to cross `dense_threshold`, because that same mass is now divided among many more cells. A threshold tuned for a coarse fixed grid can therefore make `AdaptiveDStream` systematically under-classify dense regions once it refines them — the more successfully it adapts, the more it can undercut its own dense-cell threshold. The original D-Stream formulation compares *density* (count / cell volume) against a threshold; moving to that here (or otherwise scaling `dense_threshold`/`sparse_threshold` with cell volume) is the top item for week 2.
@@ -138,8 +179,9 @@ Both point the same direction: the fix isn't the splitting heuristic itself, it'
 - Dense-cell adjacency for clustering is `O(m²)` in the number of dense cells.
 - Splitting always refines every dimension at once (`2**d` children), never a single dimension.
 - No merge/contraction of over-refined cells, only idle-sparse pruning.
-- No ANN/LSH indexing; `FixedGridDStream._find_leaf` is `O(1)` arithmetic indexing, but `AdaptiveDStream._find_leaf` walks the tree.
-- 2D only, by current focus, not by design constraint — `GridCell`/`AdaptiveDStream` are dimension-generic (`2**d` children, per-axis bounds), but nothing above 2D has been run or evaluated yet.
+- No ANN/LSH indexing; `FixedGridDStream._find_leaf` is `O(1)` arithmetic indexing, but `AdaptiveDStream._find_leaf` walks the tree, and each non-leaf step scans all `2**dim` children — expensive once `dim` is large and any splits have happened.
+- **2D is still the focus, though no longer the only dimension exercised.** All the headline numbers above are 2D. [Higher dimensions](#higher-dimensions) is a first, preliminary look at `dim > 2` (the stream generators, evaluation harness, and `plot_state` are now dimension-generic — see below) but uses one seed, untuned thresholds, and noise-only extra dimensions; it is not a substitute for real multi-dimensional evaluation.
+- `plot_state` only draws the exact grid partition for `dim` 1 or 2. For `dim >= 3`, drawing axis-aligned hyper-rectangles projected onto two axes would be actively misleading (unrelated cells overlap once projected), so it instead scatters points by predicted cluster on two chosen axes, annotated with leaf/dense/cluster counts — informative, but not a substitute for seeing the actual partition.
 
 ## Repository layout
 
@@ -150,10 +192,11 @@ src/adaptive_dstream/
   baselines.py     FixedGridDStream + RiverClusterAdapter (DenStream/CluStream/DBSTREAM)
   synthetic.py     Stream generators + reproducible save/load
   evaluation.py    Prequential eval harness: ARI/NMI/purity/memory/throughput
-  plotting.py      2D grid-state visualization
+  plotting.py      Grid-state visualization: exact partition (dim 1-2), cluster-projection scatter (dim >= 3)
 examples/
-  run_2d_drift.py        Quickstart visualization on the symmetric two-Gaussian stream
+  run_2d_drift.py        Quickstart visualization on the symmetric two-Gaussian stream (--dim, default 2)
   run_frontier_sweep.py  The evaluation in this README
+  run_dimension_sweep.py Memory/accuracy vs. dimension (see "Higher dimensions")
 tests/
 data/          generated streams: {name}.npz (arrays) + {name}.json (seed/params manifest), committed
 outputs/       plots and result JSON land here
@@ -161,4 +204,4 @@ outputs/       plots and result JSON land here
 
 ## Contributing / next steps
 
-See [Known limitations](#known-limitations) for the ranked list. The immediate next steps, in order, are (1) density-normalized dense/sparse thresholds and (2) freeing a cell's storage once it has children, then re-running the frontier sweep to see how much of the gap to the fixed-grid frontier those two account for before touching the splitting heuristic itself.
+See [Known limitations](#known-limitations) for the ranked list. The immediate next steps, in order, are (1) density-normalized dense/sparse thresholds and (2) freeing a cell's storage once it has children, then re-running the frontier sweep to see how much of the gap to the fixed-grid frontier those two account for before touching the splitting heuristic itself. Both are especially relevant to [Higher dimensions](#higher-dimensions): density normalization directly addresses the harsher per-split mass fragmentation (`2**dim` children) that's the leading suspect for `AdaptiveDStream`'s accuracy gap growing worse, not better, at low-to-mid dimension before it narrows again at dim 8-10 — re-running the dimension sweep after that fix, with per-dimension threshold tuning and more than one seed, is the natural follow-up.

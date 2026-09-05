@@ -8,23 +8,63 @@ from pathlib import Path
 import numpy as np
 
 
-def make_drifting_stream(n_samples: int = 3000, random_state: int = 42):
-    """Two 2D Gaussian clusters whose locations/scales change in three phases."""
+def _orbit_centers(dim: int, n_phases: int, radius: float = 3.0):
+    """Place an antipodal pair of per-phase centers orbiting the origin.
+
+    The orbit lives in the first two coordinates (first one only if
+    ``dim == 1``); any remaining coordinates are held at zero. This keeps
+    the "two clusters, always separated, drifting" shape meaningful in any
+    dimension >= 1 while staying visualizable via its leading axes.
+    """
+    angles = np.linspace(0, 2 * np.pi, n_phases, endpoint=False)
+    centers_a, centers_b = [], []
+    for a in angles:
+        ca, cb = np.zeros(dim), np.zeros(dim)
+        ca[0] = radius * np.cos(a)
+        cb[0] = -radius * np.cos(a)
+        if dim > 1:
+            ca[1] = radius * np.sin(a)
+            cb[1] = -radius * np.sin(a)
+        centers_a.append(ca)
+        centers_b.append(cb)
+    return centers_a, centers_b
+
+
+def make_drifting_stream(n_samples: int = 3000, random_state: int = 42, dim: int = 2):
+    """Two Gaussian clusters whose locations/scales change in three phases.
+
+    ``dim`` defaults to 2 (the hand-tuned configuration used by the
+    quickstart visualization, kept bit-for-bit reproducible). Other
+    dimensions fall back to an isotropic, dimension-generic layout via
+    :func:`_orbit_centers`.
+    """
     rng = np.random.default_rng(random_state)
-    X = np.zeros((n_samples, 2), dtype=float)
+    X = np.zeros((n_samples, dim), dtype=float)
     y = np.zeros(n_samples, dtype=int)
     phase = np.zeros(n_samples, dtype=int)
     cuts = [0, n_samples // 3, 2 * n_samples // 3, n_samples]
-    configs = [
-        ([(-2.5, -1.0), (2.5, 1.0)], [(0.45, 0.55), (0.55, 0.45)]),
-        ([(-1.2, 1.8), (1.4, -1.5)], [(0.55, 0.40), (0.45, 0.65)]),
-        ([(-2.0, 2.2), (2.2, 2.0)], [(0.35, 0.80), (0.80, 0.35)]),
-    ]
+
+    if dim == 2:
+        configs = [
+            ([(-2.5, -1.0), (2.5, 1.0)], [(0.45, 0.55), (0.55, 0.45)]),
+            ([(-1.2, 1.8), (1.4, -1.5)], [(0.55, 0.40), (0.45, 0.65)]),
+            ([(-2.0, 2.2), (2.2, 2.0)], [(0.35, 0.80), (0.80, 0.35)]),
+        ]
+        for p in range(3):
+            means, scales = configs[p]
+            for i in range(cuts[p], cuts[p + 1]):
+                label = int(rng.random() > 0.5)
+                X[i] = rng.normal(np.array(means[label]), np.array(scales[label]))
+                y[i] = label
+                phase[i] = p
+        return X, y, phase
+
+    centers0, centers1 = _orbit_centers(dim, n_phases=3, radius=2.5)
     for p in range(3):
-        means, scales = configs[p]
         for i in range(cuts[p], cuts[p + 1]):
             label = int(rng.random() > 0.5)
-            X[i] = rng.normal(np.array(means[label]), np.array(scales[label]))
+            mu = centers0[p] if label == 0 else centers1[p]
+            X[i] = rng.normal(mu, 0.5)
             y[i] = label
             phase[i] = p
     return X, y, phase
@@ -37,6 +77,7 @@ def make_varying_density_stream(
     sparse_std: float = 1.6,
     dense_weight: float = 0.5,
     n_phases: int = 3,
+    dim: int = 2,
 ):
     """A stream with one tight/dense cluster and one broad/sparse cluster
     present *simultaneously* at every time step, drifting over ``n_phases``
@@ -51,9 +92,14 @@ def make_varying_density_stream(
     if they ever drift close.
 
     Label 0 is always the dense/tight cluster, label 1 the sparse/broad one.
+    ``dim`` (default 2, matching the reproducible ``seed=7`` results in the
+    README) generalizes to any dimension >= 1; the two clusters' centers
+    orbit the origin in the leading one or two axes via :func:`_orbit_centers`
+    for ``dim != 2`` or ``n_phases != 3`` (the dim=2/n_phases=3 case keeps
+    its original hand-picked centers for exact backward compatibility).
     """
     rng = np.random.default_rng(random_state)
-    X = np.zeros((n_samples, 2), dtype=float)
+    X = np.zeros((n_samples, dim), dtype=float)
     y = np.zeros(n_samples, dtype=int)
     phase = np.zeros(n_samples, dtype=int)
     cuts = np.linspace(0, n_samples, n_phases + 1).astype(int)
@@ -61,12 +107,11 @@ def make_varying_density_stream(
     # Both cluster centers drift along independent smooth paths so that at
     # some point during the run their footprints partially overlap in space
     # even though their local densities never do.
-    dense_centers = [(-2.2, -2.0), (0.0, -0.5), (2.0, 1.5)]
-    sparse_centers = [(2.0, 2.0), (0.5, 1.0), (-1.5, -1.5)]
-    if n_phases != 3:
-        angles = np.linspace(0, 2 * np.pi, n_phases, endpoint=False)
-        dense_centers = [(3.0 * np.cos(a), 3.0 * np.sin(a)) for a in angles]
-        sparse_centers = [(-3.0 * np.cos(a), -3.0 * np.sin(a)) for a in angles]
+    if dim == 2 and n_phases == 3:
+        dense_centers = [np.array(c) for c in [(-2.2, -2.0), (0.0, -0.5), (2.0, 1.5)]]
+        sparse_centers = [np.array(c) for c in [(2.0, 2.0), (0.5, 1.0), (-1.5, -1.5)]]
+    else:
+        dense_centers, sparse_centers = _orbit_centers(dim, n_phases, radius=3.0)
 
     for p in range(n_phases):
         lo, hi = cuts[p], cuts[p + 1]
@@ -85,15 +130,25 @@ def make_varying_density_stream(
     return X, y, phase
 
 
-def make_moons_stream(n_samples: int = 3000, random_state: int = 42, noise: float = 0.08, n_phases: int = 3):
+def make_moons_stream(n_samples: int = 3000, random_state: int = 42, noise: float = 0.08, n_phases: int = 3,
+                       dim: int = 2):
     """Two interleaving, non-convex 'moon' clusters that rotate and drift
     over ``n_phases`` phases. Exercises arbitrary-shape (non-Gaussian, non-
     convex) clusters rather than only isotropic blobs.
+
+    The moon shape itself is inherently 2D (``sklearn.datasets.make_moons``
+    plus a 2D rotation), so ``dim`` (default 2, exactly reproducing the
+    original stream) requires ``dim >= 2``; any extra dimensions beyond the
+    first two are filled with small isotropic Gaussian noise so the moons
+    are embedded in, rather than reshaped by, the higher-dimensional space.
     """
     from sklearn.datasets import make_moons
 
+    if dim < 2:
+        raise ValueError("make_moons_stream requires dim >= 2 (the moon shape is inherently 2D).")
+
     rng = np.random.default_rng(random_state)
-    X = np.zeros((n_samples, 2), dtype=float)
+    X = np.zeros((n_samples, dim), dtype=float)
     y = np.zeros(n_samples, dtype=int)
     phase = np.zeros(n_samples, dtype=int)
     cuts = np.linspace(0, n_samples, n_phases + 1).astype(int)
@@ -111,7 +166,9 @@ def make_moons_stream(n_samples: int = 3000, random_state: int = 42, noise: floa
         Xp = Xp @ rot.T
         shift = np.array([1.5 * np.cos(2 * np.pi * p / n_phases), 1.5 * np.sin(2 * np.pi * p / n_phases)])
         Xp = Xp + shift
-        X[lo:hi] = Xp
+        X[lo:hi, :2] = Xp
+        if dim > 2:
+            X[lo:hi, 2:] = rng.normal(0.0, noise, size=(n, dim - 2))
         y[lo:hi] = yp
         phase[lo:hi] = p
     return X, y, phase
