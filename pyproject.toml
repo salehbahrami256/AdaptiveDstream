@@ -9,6 +9,7 @@ description = "Prototype implementation of Adaptive D-Stream for evolving data s
 requires-python = ">=3.10"
 dependencies = [
     "numpy>=1.24",
+    "scipy>=1.10",
     "matplotlib>=3.7",
     "scikit-learn>=1.3",
     "river>=0.21"

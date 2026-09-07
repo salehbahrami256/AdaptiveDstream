@@ -31,7 +31,15 @@ from adaptive_dstream import (
 )
 
 SEED = 7
-N_SAMPLES = 4000
+# Reduced from 4000: contraction (_contract_recursive) and the transitional-
+# cell border-assignment pass (see README "Method") both add per-point cost
+# on top of the already-documented O(dense^2) clustering-adjacency check
+# that run_stream_eval's tracemalloc-instrumented prequential loop pays on
+# every point, not just every maintenance interval. At 4000 points this
+# stopped being tractable to re-run interactively; 2000 keeps the same
+# resolution sweep and adversarial stream while staying fast enough to
+# reproduce on demand.
+N_SAMPLES = 2000
 GRID_RESOLUTIONS = [2, 3, 4, 6, 8, 11, 16, 22, 32, 45]
 
 DATA_DIR = Path("data")
@@ -75,8 +83,14 @@ def main() -> None:
     # {2.0, 1.0, 0.5, 0.2}) documented in that section, not fit to this run.
     adaptive_common = dict(common)
     adaptive_common.update(dense_threshold=0.5, sparse_threshold=0.05)
+    # merge_threshold/merge_min_age enable contraction (children merge back
+    # into their parent once none of them individually needs the finer
+    # resolution); split_strategy defaults to "equal_uniform" here to keep
+    # this the same experiment as before -- see run_split_strategy_sweep.py
+    # for a dedicated comparison of the three redistribution strategies.
     adaptive_factory = lambda: AdaptiveDStream(
         **adaptive_common, split_threshold=0.05, max_depth=7, max_cells=3000,
+        merge_threshold=0.01, merge_min_age=200,
     )
     r = run_stream_eval(adaptive_factory, X, y, phase=phase, name="AdaptiveDStream")
     results.append({**r.to_dict(), "family": "AdaptiveDStream", "n_cells_per_dim": None})

@@ -4,6 +4,7 @@ import json
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Sequence
 
 import numpy as np
 
@@ -78,6 +79,9 @@ def make_varying_density_stream(
     dense_weight: float = 0.5,
     n_phases: int = 3,
     dim: int = 2,
+    drift: bool = True,
+    dense_std_schedule: Sequence[float] | None = None,
+    sparse_std_schedule: Sequence[float] | None = None,
 ):
     """A stream with one tight/dense cluster and one broad/sparse cluster
     present *simultaneously* at every time step, drifting over ``n_phases``
@@ -97,7 +101,27 @@ def make_varying_density_stream(
     orbit the origin in the leading one or two axes via :func:`_orbit_centers`
     for ``dim != 2`` or ``n_phases != 3`` (the dim=2/n_phases=3 case keeps
     its original hand-picked centers for exact backward compatibility).
+
+    ``drift`` (default ``True``, matching prior behavior) toggles the
+    spatial drift above. With ``drift=False`` both cluster centers are
+    frozen at their phase-0 location for the entire stream: a static
+    control that isolates what adaptive refinement buys on data whose
+    layout never moves from what it costs.
+
+    ``dense_std_schedule``/``sparse_std_schedule`` (optional, each of length
+    ``n_phases`` if given) let a cluster's local density change over time
+    *independent of position*: the corresponding cluster's standard
+    deviation for phase ``p`` is taken from the schedule instead of held
+    constant at ``dense_std``/``sparse_std``. This isolates density drift
+    (which is what should drive split/merge decisions) from relocation, and
+    composes with ``drift=False`` to test density-only drift at fixed
+    positions.
     """
+    if dense_std_schedule is not None and len(dense_std_schedule) != n_phases:
+        raise ValueError("dense_std_schedule must have length n_phases.")
+    if sparse_std_schedule is not None and len(sparse_std_schedule) != n_phases:
+        raise ValueError("sparse_std_schedule must have length n_phases.")
+
     rng = np.random.default_rng(random_state)
     X = np.zeros((n_samples, dim), dtype=float)
     y = np.zeros(n_samples, dtype=int)
@@ -117,14 +141,17 @@ def make_varying_density_stream(
         lo, hi = cuts[p], cuts[p + 1]
         if hi <= lo:
             continue
-        dense_mu = np.array(dense_centers[p % len(dense_centers)])
-        sparse_mu = np.array(sparse_centers[p % len(sparse_centers)])
+        center_phase = p if drift else 0
+        dense_mu = np.array(dense_centers[center_phase % len(dense_centers)])
+        sparse_mu = np.array(sparse_centers[center_phase % len(sparse_centers)])
+        phase_dense_std = dense_std if dense_std_schedule is None else dense_std_schedule[p]
+        phase_sparse_std = sparse_std if sparse_std_schedule is None else sparse_std_schedule[p]
         for i in range(lo, hi):
             label = int(rng.random() > dense_weight)
             if label == 0:
-                X[i] = rng.normal(dense_mu, dense_std)
+                X[i] = rng.normal(dense_mu, phase_dense_std)
             else:
-                X[i] = rng.normal(sparse_mu, sparse_std)
+                X[i] = rng.normal(sparse_mu, phase_sparse_std)
             y[i] = label
             phase[i] = p
     return X, y, phase
