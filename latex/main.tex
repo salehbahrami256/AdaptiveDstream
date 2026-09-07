@@ -471,49 +471,6 @@ Two patterns emerge, both consistent with the earlier ($n=2500$) run but sharper
 
 Second, AdaptiveDStream remains dominated in accuracy for $d=2$--$6$, and the gap narrows at $d=8$ exactly as before (ARI 34\% of the fixed grid's, up from single digits at low dimension) — consistent with the unchanged root cause (Section~\ref{sec:root-cause}): a split fragments mass across $2^d$ children, a far harsher penalty at $d=8$ (256-way) than at $d=2$ (4-way), and the dense threshold remains an absolute count regardless of contraction or transitional assignment. At $d=10$, AdaptiveDStream (0.047) nominally exceeds the fixed grid (0.030) for the first time — but the fixed grid's own ARI collapsed sharply relative to the earlier, larger-sample run (0.486 there vs.\ 0.030 here), most plausibly a small-sample artifact of an $n{=}2$-per-axis grid at only 400 points, not evidence that AdaptiveDStream overtook it on merit. Given the single seed, untuned per-dimension thresholds, and the smaller sample size used here, we treat this dimensionality result as a preliminary signal worth pursuing rather than a validated finding, and read the $d=10$ reversal specifically as noise.
 
-\subsection{Effect of Dimensionality}
-\label{sec:dim-sweep}
-
-We repeated the comparison on the same stream family generalized to $d > 2$, with the two cluster centers orbiting in the first two coordinates and every additional dimension carrying pure isotropic noise, the standard curse-of-dimensionality stress case. This is a preliminary probe rather than a full multi-dimensional evaluation: it uses a single seed, $n = 2500$ points, and neither model's thresholds were retuned per dimension. At each dimension, the fixed grid's resolution was chosen so its total cell count lands near the adaptive method's $2500$-cell budget, so the comparison is roughly memory-matched rather than resolution-matched. Table~\ref{tab:dimsweep} and Figure~\ref{fig:dimsweep} summarize the outcome for $d \in \{2,3,4,5,6,8,10\}$.
-
-\begin{table}[h]
-\centering
-\caption{Effect of dimensionality on peak memory and accuracy, at roughly matched memory budgets (varying-density stream, $n=2500$, seed 7, single run per dimension).}
-\label{tab:dimsweep}
-\begin{tabular}{rlrrrr}
-\toprule
-Dim & Model & Cells & Peak memory (KB) & ARI & NMI \\
-\midrule
-2  & FixedGrid ($n{=}50$) & 2500 & 1930.8 & 0.627 & 0.577 \\
-2  & \textbf{AdaptiveDStream} & 850  & \textbf{870.7}  & 0.074 & 0.104 \\
-3  & FixedGrid ($n{=}14$) & 2744 & 2200.3 & 0.653 & 0.629 \\
-3  & \textbf{AdaptiveDStream} & 1296 & \textbf{1183.9} & 0.015 & 0.057 \\
-4  & FixedGrid ($n{=}7$)  & 2401 & 2002.0 & 0.465 & 0.418 \\
-4  & \textbf{AdaptiveDStream} & 1966 & \textbf{1742.7} & 0.020 & 0.073 \\
-5  & FixedGrid ($n{=}5$)  & 3125 & 2701.2 & 0.496 & 0.476 \\
-5  & \textbf{AdaptiveDStream} & 2481 & \textbf{2205.4} & 0.050 & 0.096 \\
-6  & FixedGrid ($n{=}4$)  & 4096 & 3666.8 & 0.328 & 0.308 \\
-6  & \textbf{AdaptiveDStream} & 2458 & \textbf{2227.1} & 0.043 & 0.076 \\
-8  & FixedGrid ($n{=}3$)  & 6561 & 6284.7 & 0.520 & 0.511 \\
-8  & \textbf{AdaptiveDStream} & 2296 & \textbf{2205.4} & 0.210 & 0.185 \\
-10 & FixedGrid ($n{=}2$)  & 1024 & 1047.6 & 0.486 & 0.495 \\
-10 & \textbf{AdaptiveDStream} & 2047 & \textbf{2093.0} & 0.291 & 0.258 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{figure}[h]
-\centering
-\includegraphics[width=0.48\textwidth]{figures/dimension_sweep_memory.png}
-\includegraphics[width=0.48\textwidth]{figures/dimension_sweep_ari.png}
-\caption{Peak memory (left) and ARI (right) versus dimension, comparing AdaptiveDStream against a fixed grid whose resolution is chosen to match its cell budget at each dimension.}
-\label{fig:dimsweep}
-\end{figure}
-
-Two patterns emerge. First, the memory hypothesis behind the method is partially supported: from $d=2$ to $d=8$, AdaptiveDStream uses only 35--87\% of the budget-matched fixed grid's memory and plateaus near its $\texttt{max\_cells}$ cap, while the fixed grid's memory keeps climbing because its cell count scales as $n_{\text{cells per dim}}^d$ and, at high dimension, $n_{\text{cells per dim}}$ can only move in coarse integer steps: at $d=8$, going from $n=2$ (256 cells) to $n=3$ (6561 cells) overshoots the 2500-cell target by 2.6$\times$ with no intermediate resolution available. Past a point, a fixed grid is not just more expensive in high dimension, it stops being tunable to a given memory budget at all.
-
-Second, AdaptiveDStream remains dominated in accuracy at every dimension tested, consistent with the root cause identified in Section~\ref{sec:root-cause}: a fixed, non-volume-normalized dense threshold is penalized more harshly as dimension grows, since a split fragments mass across $2^d$ children, a 256-way fragmentation at $d=8$ versus 4-way at $d=2$. The relative gap does narrow at high dimension, from 2--13\% of the fixed grid's ARI at $d=2$--$6$ to 40\% at $d=8$ and 60\% at $d=10$, but part of this narrowing is the fixed-grid baseline itself degrading as uninformative noise dimensions dilute Euclidean-adjacency clustering, not only AdaptiveDStream improving. Given the single seed, untuned per-dimension thresholds, and smaller sample size used here, we treat this dimensionality result as a preliminary signal worth pursuing rather than a validated finding.
-
 \subsection{Cross-Regime Generalization}
 \label{sec:regime-sweep}
 
