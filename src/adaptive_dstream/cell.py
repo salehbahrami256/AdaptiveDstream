@@ -17,6 +17,7 @@ class GridCell:
     raw_count: int = 0
     children: list["GridCell"] = field(default_factory=list)
     cluster_id: Optional[int] = None
+    split_time: Optional[int] = None
 
     def __post_init__(self) -> None:
         self.lower = np.asarray(self.lower, dtype=float)

@@ -4,8 +4,47 @@ from collections import deque
 from dataclasses import dataclass
 import itertools
 import numpy as np
+from scipy.stats import norm
 
 from .cell import GridCell
+
+SPLIT_STRATEGIES = ("equal_uniform", "point_mass", "moment_based")
+
+
+def _axis_lower_fraction(mu: float, sigma: float, lo: float, mid: float, hi: float) -> float:
+    """P(X <= mid | lo <= X <= hi) for X ~ Normal(mu, sigma^2).
+
+    Degenerates gracefully to a point mass at ``mu`` (clipped into
+    ``[lo, hi]``) when ``sigma`` is effectively zero, and to an even 0.5
+    split when the parent's own tracked density gives no usable signal
+    (``sigma`` non-degenerate but the truncated mass is numerically zero).
+    """
+    if hi - lo <= 1e-12:
+        return 0.5
+    if sigma <= 1e-9:
+        mu_clipped = min(max(mu, lo), hi)
+        return 1.0 if mu_clipped <= mid else 0.0
+    alpha, m, beta = (lo - mu) / sigma, (mid - mu) / sigma, (hi - mu) / sigma
+    z = norm.cdf(beta) - norm.cdf(alpha)
+    if z <= 1e-12:
+        return 0.5
+    return float((norm.cdf(m) - norm.cdf(alpha)) / z)
+
+
+def _truncated_normal_moments(mu: float, sigma: float, a: float, b: float) -> tuple[float, float]:
+    """Mean and variance of Normal(mu, sigma^2) truncated to [a, b]."""
+    if b - a <= 1e-12:
+        return 0.5 * (a + b), 0.0
+    if sigma <= 1e-9:
+        return min(max(mu, a), b), 0.0
+    alpha, beta = (a - mu) / sigma, (b - mu) / sigma
+    z = norm.cdf(beta) - norm.cdf(alpha)
+    if z <= 1e-12:
+        return 0.5 * (a + b), ((b - a) ** 2) / 12.0
+    phi_a, phi_b = norm.pdf(alpha), norm.pdf(beta)
+    mean = mu + sigma * (phi_a - phi_b) / z
+    var = (sigma ** 2) * (1.0 + (alpha * phi_a - beta * phi_b) / z - ((phi_a - phi_b) / z) ** 2)
+    return mean, max(var, 0.0)
 
 
 @dataclass
@@ -22,6 +61,9 @@ class AdaptiveDStream:
     idle_prune_after: int = 300
     alpha_var: float = 1.0
     alpha_mean: float = 1.0
+    split_strategy: str = "equal_uniform"
+    merge_threshold: float = 0.01
+    merge_min_age: int = 100
 
     def __post_init__(self) -> None:
         self.lower = np.asarray(self.lower, dtype=float)
@@ -32,6 +74,10 @@ class AdaptiveDStream:
             raise ValueError("Each upper bound must be greater than lower bound.")
         if not (0.0 < self.decay < 1.0):
             raise ValueError("decay must be in (0, 1).")
+        if self.split_strategy not in SPLIT_STRATEGIES:
+            raise ValueError(f"split_strategy must be one of {SPLIT_STRATEGIES}, got {self.split_strategy!r}.")
+        if not (self.merge_threshold < self.split_threshold):
+            raise ValueError("merge_threshold must be < split_threshold to avoid split/merge oscillation.")
         self.root = GridCell(self.lower, self.upper, level=0, last_update=0)
         self.t = 0
         self.n_seen = 0
@@ -104,30 +150,96 @@ class AdaptiveDStream:
         return score > self.split_threshold
 
     def _split(self, cell: GridCell) -> None:
-        """Split every dimension; redistribute historical summaries equally."""
+        """Split every dimension; redistribute historical summaries per ``split_strategy``."""
         mids = 0.5 * (cell.lower + cell.upper)
-        children = []
+        entries: list[tuple[np.ndarray, GridCell]] = []
         for bits in itertools.product([0, 1], repeat=self.dim):
             bits = np.asarray(bits, dtype=int)
             lower = np.where(bits == 0, cell.lower, mids)
             upper = np.where(bits == 0, mids, cell.upper)
-            children.append(GridCell(lower, upper, cell.level + 1, cell.last_update))
+            entries.append((bits, GridCell(lower, upper, cell.level + 1, cell.last_update)))
 
-        k = len(children)
-        for child in children:
-            # v0 assumption: historical mass is equally distributed among
-            # children and is locally uniform inside each child. This gives
-            # child-specific moments consistent with that assumption.
+        if self.split_strategy == "equal_uniform":
+            self._redistribute_equal_uniform(cell, entries)
+        elif self.split_strategy == "point_mass":
+            self._redistribute_point_mass(cell, entries)
+        else:
+            self._redistribute_moment_based(cell, entries, mids)
+
+        cell.children = [child for _, child in entries]
+        cell.split_time = self.t
+
+    def _redistribute_equal_uniform(self, cell: GridCell, entries: list[tuple[np.ndarray, GridCell]]) -> None:
+        # v0 strategy: historical mass is split equally among children and
+        # assumed locally uniform inside each child. This gives child-specific
+        # moments consistent with that assumption.
+        k = len(entries)
+        for _, child in entries:
             child.s0 = cell.s0 / k
             mu = child.center
             var = (child.side_lengths ** 2) / 12.0
             child.s1 = child.s0 * mu
             child.s2 = child.s0 * (var + mu * mu)
             child.raw_count = cell.raw_count // k
-        cell.children = children
+
+    def _redistribute_point_mass(self, cell: GridCell, entries: list[tuple[np.ndarray, GridCell]]) -> None:
+        # Degenerate strategy: treat all of the parent's accumulated mass as
+        # concentrated at its tracked mean, and hand the entire history to
+        # whichever single child contains that point. A useful contrast
+        # against equal_uniform (spreads mass regardless of where it is) and
+        # moment_based (splits mass proportionally).
+        mu_clipped = np.clip(cell.mean(), cell.lower, cell.upper)
+        assigned = False
+        for _, child in entries:
+            if not assigned and child.contains(mu_clipped):
+                child.s0 = cell.s0
+                child.s1 = cell.s1.copy()
+                child.s2 = cell.s2.copy()
+                child.raw_count = cell.raw_count
+                assigned = True
+            else:
+                child.s0 = 0.0
+                child.s1 = np.zeros(self.dim)
+                child.s2 = np.zeros(self.dim)
+                child.raw_count = 0
+
+    def _redistribute_moment_based(
+        self, cell: GridCell, entries: list[tuple[np.ndarray, GridCell]], mids: np.ndarray,
+    ) -> None:
+        # Principled strategy: model the parent's within-cell distribution as
+        # an axis-independent Gaussian matching its tracked mean/variance,
+        # truncated to the parent's own bounds. Each child then gets the
+        # Gaussian mass its half-interval implies per axis (not an equal
+        # share), and its own mean/variance are the corresponding truncated-
+        # normal moments rather than an assumed-uniform placeholder.
+        mu = cell.mean()
+        sigma = np.sqrt(cell.variance())
+        lower_frac = np.array([
+            _axis_lower_fraction(mu[j], sigma[j], cell.lower[j], mids[j], cell.upper[j])
+            for j in range(self.dim)
+        ])
+        lower_moments = [_truncated_normal_moments(mu[j], sigma[j], cell.lower[j], mids[j]) for j in range(self.dim)]
+        upper_moments = [_truncated_normal_moments(mu[j], sigma[j], mids[j], cell.upper[j]) for j in range(self.dim)]
+
+        for bits, child in entries:
+            frac = 1.0
+            child_mean = np.empty(self.dim)
+            child_var = np.empty(self.dim)
+            for j in range(self.dim):
+                if bits[j] == 0:
+                    frac *= lower_frac[j]
+                    child_mean[j], child_var[j] = lower_moments[j]
+                else:
+                    frac *= (1.0 - lower_frac[j])
+                    child_mean[j], child_var[j] = upper_moments[j]
+            child.s0 = cell.s0 * frac
+            child.s1 = child.s0 * child_mean
+            child.s2 = child.s0 * (child_var + child_mean ** 2)
+            child.raw_count = int(round(cell.raw_count * frac))
 
     def maintenance(self) -> None:
         self._prune_recursive(self.root)
+        self._contract_recursive(self.root)
         self._assign_clusters()
 
     def _prune_recursive(self, node: GridCell) -> None:
@@ -145,6 +257,45 @@ class AdaptiveDStream:
                     continue
             kept.append(child)
         node.children = kept
+
+    def _contract_recursive(self, node: GridCell) -> None:
+        """Merge a fully-split cell's children back into it when none of
+        them individually still need the resolution (``max R(g_i) <
+        merge_threshold``, mirroring the paper's contraction criterion).
+
+        Bottom-up: children are checked first, so a cascade of stale splits
+        can collapse in a single maintenance pass. ``merge_min_age`` guards
+        against undoing a split before its children have had a chance to
+        accumulate new data — right after a split every child's
+        refinement score is exactly 0 by construction (its moments are set
+        to match the assumed-uniform baseline that ``refinement_score``
+        measures deviation from), so without this guard a cell could merge
+        back on the very next maintenance call regardless of how the split
+        was seeded.
+        """
+        if node.is_leaf:
+            return
+        for child in node.children:
+            self._contract_recursive(child)
+        if node.split_time is None or (self.t - node.split_time) < self.merge_min_age:
+            return
+        if not all(child.is_leaf for child in node.children):
+            return
+        for child in node.children:
+            child.decay_to(self.t, self.decay)
+        scores = [child.refinement_score(self.alpha_var, self.alpha_mean) for child in node.children]
+        if max(scores, default=0.0) < self.merge_threshold:
+            self._merge_children(node)
+
+    def _merge_children(self, node: GridCell) -> None:
+        children = node.children
+        node.s0 = sum(c.s0 for c in children)
+        node.s1 = sum((c.s1 for c in children), start=np.zeros(self.dim))
+        node.s2 = sum((c.s2 for c in children), start=np.zeros(self.dim))
+        node.raw_count = sum(c.raw_count for c in children)
+        node.last_update = self.t
+        node.children = []
+        node.split_time = None
 
     def _cells_touch_by_face(self, a: GridCell, b: GridCell, tol: float = 1e-12) -> bool:
         touching_dims = 0
@@ -193,6 +344,23 @@ class AdaptiveDStream:
                         visited.add(j)
                         q.append(j)
             cluster_id += 1
+
+        # Border assignment: a transitional cell that is face-adjacent to a
+        # dense cluster is attached to it (its highest-density neighbor,
+        # where more than one qualifies), mirroring DBSCAN's border-point
+        # rule. A transitional cell with no dense neighbor stays unassigned,
+        # same as a sparse cell.
+        transitional = [
+            c for c in leaves
+            if c.state(self.t, self.decay, self.dense_threshold, self.sparse_threshold) == "transitional"
+        ]
+        for c in transitional:
+            best_neighbor = None
+            for d in dense:
+                if self._cells_touch_by_face(c, d) and (best_neighbor is None or d.s0 > best_neighbor.s0):
+                    best_neighbor = d
+            if best_neighbor is not None:
+                c.cluster_id = best_neighbor.cluster_id
 
     def cluster_cells(self) -> list[GridCell]:
         self._assign_clusters()

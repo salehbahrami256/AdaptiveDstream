@@ -1,5 +1,7 @@
 import numpy as np
+import pytest
 from adaptive_dstream import AdaptiveDStream
+from adaptive_dstream.cell import GridCell
 
 
 def test_basic_updates():
@@ -20,6 +22,7 @@ def test_split_creates_four_children_in_2d():
         lower=np.array([-1.0, -1.0]),
         upper=np.array([1.0, 1.0]),
         split_threshold=-1.0,
+        merge_threshold=-2.0,
         max_depth=1,
         max_cells=10,
     )
@@ -44,3 +47,141 @@ def test_out_of_domain_point_is_clipped_not_rejected():
     assert model.root.s0 > 0.0
     # predict_point_cluster must not raise either.
     model.predict_point_cluster(far_point)
+
+
+def test_invalid_split_strategy_raises():
+    with pytest.raises(ValueError):
+        AdaptiveDStream(
+            lower=np.array([-1.0, -1.0]), upper=np.array([1.0, 1.0]), split_strategy="bogus",
+        )
+
+
+def test_merge_threshold_must_be_below_split_threshold():
+    with pytest.raises(ValueError):
+        AdaptiveDStream(
+            lower=np.array([-1.0, -1.0]), upper=np.array([1.0, 1.0]),
+            split_threshold=0.04, merge_threshold=0.04,
+        )
+
+
+def test_point_mass_split_puts_all_mass_in_one_child():
+    model = AdaptiveDStream(
+        lower=np.array([-1.0, -1.0]), upper=np.array([1.0, 1.0]),
+        split_threshold=0.04, max_depth=1, max_cells=10, split_strategy="point_mass",
+    )
+    for t in range(1, 6):
+        model.partial_fit(np.array([0.7, 0.7]), t=t)
+    children = model.root.children
+    assert len(children) == 4
+    nonzero = [c for c in children if c.s0 > 0.0]
+    assert len(nonzero) == 1
+    # Mass is conserved exactly: nothing is dropped or duplicated.
+    assert nonzero[0].s0 == pytest.approx(sum(c.s0 for c in children))
+    # The point (0.7, 0.7) falls in the upper-right quadrant.
+    assert nonzero[0].contains(np.array([0.7, 0.7]))
+
+
+def test_moment_based_split_conserves_mass_and_skews_toward_the_mean():
+    model = AdaptiveDStream(
+        lower=np.array([-1.0, -1.0]), upper=np.array([1.0, 1.0]),
+        split_threshold=0.04, max_depth=1, max_cells=10, split_strategy="moment_based",
+    )
+    for t in range(1, 6):
+        model.partial_fit(np.array([0.7, 0.7]), t=t)
+    children = model.root.children
+    assert len(children) == 4
+    assert sum(c.s0 for c in children) > 0.0
+    # The quadrant containing the tracked mean (0.7, 0.7) gets the most mass,
+    # unlike equal_uniform which would split it evenly across all four.
+    upper_right = next(c for c in children if c.contains(np.array([0.7, 0.7])))
+    others = [c for c in children if c is not upper_right]
+    assert upper_right.s0 > max(c.s0 for c in others)
+
+
+def test_moment_based_split_conserves_total_mass_exactly():
+    # Direct, controlled check (bypassing partial_fit's decay/noise) that
+    # the per-axis truncated-normal mass fractions sum to exactly 1 across
+    # the 2**d children, so no mass is created or lost by the split.
+    model = AdaptiveDStream(
+        lower=np.array([-1.0, -1.0]), upper=np.array([1.0, 1.0]), split_strategy="moment_based",
+    )
+    cell = GridCell(np.array([-1.0, -1.0]), np.array([1.0, 1.0]), level=0, last_update=0)
+    cell.s0 = 20.0
+    cell.s1 = np.array([12.0, 12.0])  # mean = (0.6, 0.6)
+    cell.s2 = np.array([8.0, 8.0])    # variance = 8/20 - 0.6^2 = 0.04
+    cell.raw_count = 20
+    model._split(cell)
+    assert len(cell.children) == 4
+    assert sum(c.s0 for c in cell.children) == pytest.approx(cell.s0, rel=1e-9)
+
+
+def test_contraction_merges_stale_split_back_into_leaf():
+    model = AdaptiveDStream(
+        lower=np.array([-1.0, -1.0]), upper=np.array([1.0, 1.0]),
+        split_threshold=0.04, merge_threshold=0.03, merge_min_age=10,
+        max_depth=1, max_cells=10,
+    )
+    # Exactly 4 points: raw_count hits the split gate (max(4, 2*dim)=4) on
+    # the 4th, triggering the split with no 5th point landing in a child
+    # afterward — every child's score is then exactly 0 (matches the
+    # assumed-uniform baseline by construction), isolating this test to the
+    # merge_threshold/merge_min_age logic rather than genuine post-split data.
+    for t in range(1, 5):
+        model.partial_fit(np.array([0.7, 0.7]), t=t)
+    assert len(model.leaves()) == 4
+    assert not model.root.is_leaf
+
+    # Simulate the region going idle: advance the clock as if no further
+    # points arrived, past merge_min_age, then run maintenance directly.
+    model.t = model.t + model.merge_min_age + 1
+    model.maintenance()
+
+    assert model.root.is_leaf
+    assert len(model.leaves()) == 1
+
+
+def test_contraction_respects_merge_min_age():
+    model = AdaptiveDStream(
+        lower=np.array([-1.0, -1.0]), upper=np.array([1.0, 1.0]),
+        split_threshold=0.04, merge_threshold=0.03, merge_min_age=1000,
+        max_depth=1, max_cells=10,
+    )
+    for t in range(1, 5):
+        model.partial_fit(np.array([0.7, 0.7]), t=t)
+    assert not model.root.is_leaf
+
+    model.t = model.t + 5  # well under merge_min_age
+    model.maintenance()
+    assert not model.root.is_leaf
+
+
+def test_transitional_cell_joins_adjacent_dense_cluster():
+    model = AdaptiveDStream(
+        lower=np.array([0.0, 0.0]), upper=np.array([2.0, 1.0]),
+        dense_threshold=5.0, sparse_threshold=1.0,
+    )
+    dense_cell = GridCell(np.array([0.0, 0.0]), np.array([1.0, 1.0]), level=1, last_update=0)
+    dense_cell.s0 = 10.0
+    transitional_cell = GridCell(np.array([1.0, 0.0]), np.array([2.0, 1.0]), level=1, last_update=0)
+    transitional_cell.s0 = 3.0  # between sparse_threshold=1.0 and dense_threshold=5.0
+    model.root.children = [dense_cell, transitional_cell]
+
+    model._assign_clusters()
+    assert dense_cell.cluster_id == 0
+    assert transitional_cell.cluster_id == 0
+
+    predicted = model.predict_point_cluster(np.array([1.5, 0.5]))
+    assert predicted == 0
+
+
+def test_transitional_cell_with_no_dense_neighbor_stays_unassigned():
+    model = AdaptiveDStream(
+        lower=np.array([0.0, 0.0]), upper=np.array([2.0, 1.0]),
+        dense_threshold=5.0, sparse_threshold=1.0,
+    )
+    lonely_cell = GridCell(np.array([0.0, 0.0]), np.array([2.0, 1.0]), level=1, last_update=0)
+    lonely_cell.s0 = 3.0  # transitional, but no dense neighbor exists
+    model.root.children = [lonely_cell]
+
+    model._assign_clusters()
+    assert lonely_cell.cluster_id is None

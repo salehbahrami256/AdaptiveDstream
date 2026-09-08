@@ -44,7 +44,13 @@ from adaptive_dstream import (
 )
 
 SEED = 7
-N_SAMPLES = 2500
+# Reduced from 2500: see run_frontier_sweep.py's N_SAMPLES comment. Cost
+# here is worse at high dimension specifically, since a split now costs
+# O(2**dim) regardless of strategy and contraction adds a second full-tree
+# pass every maintenance interval -- dim=10 at n=600 alone took over two
+# minutes during calibration for this change; 400 keeps all 7 dimensions
+# reproducible in one sitting.
+N_SAMPLES = 400
 DIMS = [2, 3, 4, 5, 6, 8, 10]
 CELL_BUDGET = 2500  # target total fixed-grid cells; matches AdaptiveDStream's max_cells below
 ADAPTIVE_MAX_CELLS = 2500
@@ -80,7 +86,7 @@ def main() -> None:
 
         adaptive_factory = lambda kw=common: AdaptiveDStream(
             dense_threshold=0.5, sparse_threshold=0.05, split_threshold=0.05,
-            max_depth=7, max_cells=ADAPTIVE_MAX_CELLS, **kw)
+            max_depth=7, max_cells=ADAPTIVE_MAX_CELLS, merge_threshold=0.01, merge_min_age=200, **kw)
         r = run_stream_eval(adaptive_factory, X, y, phase=phase, name="AdaptiveDStream")
         results.append({**r.to_dict(), "family": "AdaptiveDStream", "dim": dim,
                          "n_cells_per_dim": None, "total_cells": r.active_cells_over_time[-1][1]})

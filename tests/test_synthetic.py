@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from adaptive_dstream.synthetic import (
     generate_stream,
@@ -23,6 +24,40 @@ def test_varying_density_stream_has_both_labels_and_dense_cluster_is_tighter():
     dense_spread = X[y == 0].std(axis=0).mean()
     sparse_spread = X[y == 1].std(axis=0).mean()
     assert dense_spread < sparse_spread
+
+
+def test_varying_density_stream_no_drift_freezes_centers_across_phases():
+    X, y, phase = make_varying_density_stream(n_samples=1500, random_state=1, n_phases=3, drift=False)
+    # With drift off, each cluster's per-phase mean should match its
+    # overall mean (same fixed location every phase), unlike the drifting
+    # default where per-phase means differ.
+    for label in (0, 1):
+        overall_mean = X[y == label].mean(axis=0)
+        for p in np.unique(phase):
+            mask = (y == label) & (phase == p)
+            np.testing.assert_allclose(X[mask].mean(axis=0), overall_mean, atol=0.2)
+
+
+def test_varying_density_stream_drift_true_moves_centers_across_phases():
+    X, y, phase = make_varying_density_stream(n_samples=1500, random_state=1, n_phases=3, drift=True)
+    dense_phase0_mean = X[(y == 0) & (phase == 0)].mean(axis=0)
+    dense_phase2_mean = X[(y == 0) & (phase == 2)].mean(axis=0)
+    assert not np.allclose(dense_phase0_mean, dense_phase2_mean, atol=0.2)
+
+
+def test_varying_density_stream_std_schedule_changes_spread_by_phase():
+    X, y, phase = make_varying_density_stream(
+        n_samples=3000, random_state=2, n_phases=3, drift=False,
+        dense_std_schedule=[0.1, 0.1, 1.0], sparse_std_schedule=[0.2, 0.2, 0.2],
+    )
+    early_spread = X[(y == 0) & (phase == 0)].std(axis=0).mean()
+    late_spread = X[(y == 0) & (phase == 2)].std(axis=0).mean()
+    assert late_spread > early_spread
+
+
+def test_varying_density_stream_std_schedule_wrong_length_raises():
+    with pytest.raises(ValueError):
+        make_varying_density_stream(n_samples=100, n_phases=3, dense_std_schedule=[0.1, 0.2])
 
 
 def test_moons_stream_shapes():
