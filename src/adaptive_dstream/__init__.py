@@ -9,6 +9,15 @@ from .synthetic import (
     load_stream,
 )
 from .evaluation import run_stream_eval, purity_score, EvalResult
+from .criteria import (
+    moment_refinement_score,
+    weyl_equidistribution_score,
+    weyl_threshold,
+    WeylTestResult,
+    random_projection_score,
+    RandomProjectionTestResult,
+)
+from .cell_shapes import sample_shape, SHAPES
 
 __all__ = [
     "AdaptiveDStream",
@@ -24,4 +33,12 @@ __all__ = [
     "run_stream_eval",
     "purity_score",
     "EvalResult",
+    "moment_refinement_score",
+    "weyl_equidistribution_score",
+    "weyl_threshold",
+    "WeylTestResult",
+    "random_projection_score",
+    "RandomProjectionTestResult",
+    "sample_shape",
+    "SHAPES",
 ]

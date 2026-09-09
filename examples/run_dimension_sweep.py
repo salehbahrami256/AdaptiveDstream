@@ -51,9 +51,30 @@ SEED = 7
 # minutes during calibration for this change; 400 keeps all 7 dimensions
 # reproducible in one sitting.
 N_SAMPLES = 400
-DIMS = [2, 3, 4, 5, 6, 8, 10]
+# Extended past dim=10 deliberately, *not* to see AdaptiveDStream keep
+# scaling: with max_cells=2500 and a split costing 2**dim children,
+# _should_split's own admission check (projected leaf count <= max_cells)
+# refuses every split once 2**dim alone exceeds the budget, i.e. at
+# dim >= 12 the root is architecturally unable to split at all -- it
+# degenerates to "the whole domain is one cell" regardless of what any
+# split criterion says. That degeneration, not a criterion improvement, is
+# the point being measured here: it is the empirical demonstration of why
+# a per-axis (not full-orthant) split rule is a prerequisite for reaching
+# real-data dimensionality (e.g. KDD Cup's ~41 features), not just a
+# theoretical concern. See FIXED_GRID_CELL_CAP below for the matching
+# caveat on the fixed-grid baseline.
+DIMS = [2, 3, 4, 5, 6, 8, 10, 12, 15, 20]
 CELL_BUDGET = 2500  # target total fixed-grid cells; matches AdaptiveDStream's max_cells below
 ADAPTIVE_MAX_CELLS = 2500
+# fixed_resolution_for_budget floors at n_cells_per_dim=2, so past the
+# dimension where 2**dim alone blows past CELL_BUDGET the "budget-matched"
+# design breaks down and the fixed grid instead pays 2**dim cells
+# unconditionally (its defining property -- see baselines.FixedGridDStream
+# -- eagerly allocates all of them at construction). Skip the fixed-grid
+# baseline once that would exceed this many cells, rather than silently
+# eating minutes of runtime and gigabytes of memory to allocate a baseline
+# whose own comparison premise (shared memory budget) no longer holds.
+FIXED_GRID_CELL_CAP = 200_000
 
 OUTPUT_DIR = Path("outputs")
 
@@ -76,22 +97,30 @@ def main() -> None:
 
         n_cells = fixed_resolution_for_budget(dim, CELL_BUDGET)
         total_cells = n_cells ** dim
-        factory = lambda n=n_cells, kw=common: FixedGridDStream(
-            n_cells_per_dim=n, dense_threshold=2.0, sparse_threshold=0.3, **kw)
-        r = run_stream_eval(factory, X, y, phase=phase, name="FixedGrid(budget-matched)")
-        results.append({**r.to_dict(), "family": "FixedGridDStream", "dim": dim,
-                         "n_cells_per_dim": n_cells, "total_cells": total_cells})
-        print(f"dim={dim:>2}  FixedGrid n={n_cells} ({total_cells} cells)  ARI={r.ari:.3f}  "
-              f"peak_mem={r.peak_memory_bytes/1024:.1f}KB  unassigned={r.fraction_unassigned:.2f}")
+        if total_cells > FIXED_GRID_CELL_CAP:
+            print(f"dim={dim:>2}  FixedGrid n={n_cells} ({total_cells} cells) SKIPPED: "
+                  f"exceeds FIXED_GRID_CELL_CAP={FIXED_GRID_CELL_CAP} (n_cells_per_dim floored at 2, "
+                  f"so the 'shared budget' premise no longer holds at this dimension anyway)")
+        else:
+            factory = lambda n=n_cells, kw=common: FixedGridDStream(
+                n_cells_per_dim=n, dense_threshold=2.0, sparse_threshold=0.3, **kw)
+            r = run_stream_eval(factory, X, y, phase=phase, name="FixedGrid(budget-matched)")
+            results.append({**r.to_dict(), "family": "FixedGridDStream", "dim": dim,
+                             "n_cells_per_dim": n_cells, "total_cells": total_cells})
+            print(f"dim={dim:>2}  FixedGrid n={n_cells} ({total_cells} cells)  ARI={r.ari:.3f}  "
+                  f"peak_mem={r.peak_memory_bytes/1024:.1f}KB  unassigned={r.fraction_unassigned:.2f}")
 
         adaptive_factory = lambda kw=common: AdaptiveDStream(
             dense_threshold=0.5, sparse_threshold=0.05, split_threshold=0.05,
             max_depth=7, max_cells=ADAPTIVE_MAX_CELLS, merge_threshold=0.01, merge_min_age=200, **kw)
         r = run_stream_eval(adaptive_factory, X, y, phase=phase, name="AdaptiveDStream")
+        n_leaves = r.active_cells_over_time[-1][1]
         results.append({**r.to_dict(), "family": "AdaptiveDStream", "dim": dim,
-                         "n_cells_per_dim": None, "total_cells": r.active_cells_over_time[-1][1]})
+                         "n_cells_per_dim": None, "total_cells": n_leaves})
+        degenerate = " (never split past the root: 2**dim > max_cells)" if n_leaves == 1 else ""
         print(f"dim={dim:>2}  AdaptiveDStream               ARI={r.ari:.3f}  "
-              f"peak_mem={r.peak_memory_bytes/1024:.1f}KB  unassigned={r.fraction_unassigned:.2f}")
+              f"peak_mem={r.peak_memory_bytes/1024:.1f}KB  unassigned={r.fraction_unassigned:.2f}  "
+              f"leaves={n_leaves}{degenerate}")
 
     OUTPUT_DIR.mkdir(exist_ok=True)
     with open(OUTPUT_DIR / "dimension_sweep_results.json", "w") as f:

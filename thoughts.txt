@@ -1,0 +1,16 @@
+the main problem of this method is how can we approximately answer this problem of whether the data in this particular local part of space are equally distributed or not
+
+my first statistical try lead us to variance, mean etc
+may be other approaches used better? do you have any idea for me? 
+don't change code in this stage just communicate ideas.
+
+on the other hand
+i think local sensitive hashing and some idea like count min sketch could lead us to more siutable criteria rather than just variance and mean
+and also a big part of my paper would be this:
+befor providing an algorithm we should focus on some sub-algorithms like this:
+there is a data stream in this base higher dimensional box [the subset of space that is splitted by our method]
+the first problem is to decide whether or nor data in this cell are equidistributed or not
+the second when we persuaded that this is not equally distributed we decide to expand cell to it's child
+how do it?
+the other problems are cells awareness about other cells
+for contracting potential
