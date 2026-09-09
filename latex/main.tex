@@ -2,12 +2,17 @@
 
 \usepackage[a4paper,margin=1in]{geometry}
 \usepackage{amsmath,amssymb,amsfonts}
+\usepackage{amsthm}
 \usepackage{algorithm}
 \usepackage{algorithmic}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{hyperref}
 \usepackage{xcolor}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+\newtheorem{corollary}{Corollary}
 
 \title{
 Adaptive Multi-Resolution Grid-Based Clustering for Massive Data Streams
@@ -108,6 +113,7 @@ The goal is to maintain, at any time $t$, a clustering of the points observed so
 \end{itemize}
 
 \subsection{Time-Decayed Density}
+\label{sec:proposed-method-decay}
 
 Following D-Stream, we assign higher importance to recent data points. Let $\lambda \in (0,1)$ be a decay factor. If a point $x_i$ arrived at time $T(x_i)$, its density contribution at time $t$ is defined as
 \[
@@ -199,6 +205,76 @@ A cell $g$ is refined if
 R(g) > \tau_{\text{split}},
 \]
 provided that the memory budget allows refinement and the maximum grid depth has not been reached.
+
+\subsection{Alternative Refinement Criteria: Weyl and Random-Projection Tests}
+\label{sec:alt-criteria}
+
+$R(g)$ is a moment-matching statistic: it compares the cell's tracked mean and variance to the values they would take under a uniform distribution, and is blind, by construction, to any alternative that preserves those two moments while changing the shape of the distribution (e.g.\ points concentrated along a diagonal of the cell, or a symmetric bimodal split). This subsection introduces two criteria that test equidistribution more directly, both compatible with the same $O(1)$-per-point streaming update discipline as $R(g)$, and both with a threshold $\tau$ that is derived from an explicit probabilistic guarantee rather than tuned as a free constant. Throughout, let $u = (x - \ell(g))/h_{\ell(g)} \in [0,1]^d$ denote a point rescaled into the cell's own local unit cube, so that $H_0$ (``$g$ is locally equidistributed'') is exactly $u \sim \mathrm{Uniform}([0,1]^d)$.
+
+\subsubsection{The Weyl Criterion}
+
+For a nonzero integer vector $k \in \mathbb{Z}^d \setminus \{0\}$, define the character $\varphi_k(u) = \exp(2\pi i\, k \cdot u)$ and its sample mean over the $n$ points currently in $g$,
+\[
+S_k = \frac{1}{n}\sum_{j=1}^{n} \varphi_k(u_j).
+\]
+
+\begin{proposition}[Exact null moments]
+\label{prop:weyl-moments}
+If $u \sim \mathrm{Uniform}([0,1]^d)$ and $k \in \mathbb{Z}^d \setminus\{0\}$, then $\mathbb{E}[\varphi_k(u)] = 0$ and $\mathbb{E}[|\varphi_k(u)|^2] = 1$ exactly. Moreover, for two distinct nonzero integer frequencies $k \neq \pm k'$, every second cross moment between $(\mathrm{Re}\,\varphi_k, \mathrm{Im}\,\varphi_k)$ and $(\mathrm{Re}\,\varphi_{k'}, \mathrm{Im}\,\varphi_{k'})$ is exactly zero.
+\end{proposition}
+\begin{proof}
+The characters $\{e^{2\pi i k \cdot u}\}_{k \in \mathbb{Z}^d}$ are an orthonormal basis of $L^2([0,1]^d)$, so $\int_{[0,1]^d} e^{2\pi i k\cdot u}\,du = \mathbb{1}[k=0]$ for integer $k$. This gives $\mathbb{E}[\varphi_k(u)]=0$ for $k\neq 0$ directly, and $\mathbb{E}[|\varphi_k(u)|^2]=\mathbb{E}[1]=1$ since $\varphi_k$ has unit modulus. For the cross moments, $\mathbb{E}[\varphi_k(u)\overline{\varphi_{k'}(u)}] = \int e^{2\pi i(k-k')\cdot u}\,du = \mathbb{1}[k=k']$ and $\mathbb{E}[\varphi_k(u)\varphi_{k'}(u)] = \int e^{2\pi i(k+k')\cdot u}\,du = \mathbb{1}[k=-k']$; both vanish under $k \neq \pm k'$, and expanding into real/imaginary parts gives all four cross second moments equal to zero.
+\end{proof}
+
+By Proposition~\ref{prop:weyl-moments}, $\mathrm{Var}(\mathrm{Re}\,\varphi_k)=\mathrm{Var}(\mathrm{Im}\,\varphi_k)=\tfrac12$ with zero covariance, exactly, under $H_0$. Fix a frequency set $\mathcal{K} = \{k_1,\ldots,k_m\} \subset \mathbb{Z}^d\setminus\{0\}$ with no two frequencies equal or opposite (we use the $d$ axis unit vectors together with the sum and difference of each consecutive coordinate pair, giving $m = 3d-2$, linear in $d$). Define the Weyl statistic
+\[
+T_{\mathrm{Weyl}}(g) = \sum_{k \in \mathcal{K}} 2n\,|S_k|^2.
+\]
+
+\begin{theorem}[Asymptotic calibration]
+\label{thm:weyl-chisq}
+Under $H_0$, as $n \to \infty$, $T_{\mathrm{Weyl}}(g) \Rightarrow \chi^2_{2m}$.
+\end{theorem}
+\begin{proof}[Proof sketch]
+By Proposition~\ref{prop:weyl-moments}, $\sqrt{n}\,(\mathrm{Re}\,S_k, \mathrm{Im}\,S_k)$ for each $k \in \mathcal{K}$ is a sample mean of i.i.d.\ bounded terms with mean $0$, variance $\tfrac12 I_2$, and zero cross-frequency covariance. The multivariate central limit theorem gives joint convergence to $2m$ independent $\mathcal{N}(0,\tfrac12)$ coordinates; $2n|S_k|^2$ is then the sum of two squared, independent, unit-variance-after-scaling Gaussians, i.e.\ $\chi^2_2$ per frequency, and the sum over $m$ frequencies is $\chi^2_{2m}$.
+\end{proof}
+
+The refinement threshold is therefore not a tuned constant but the $(1-\alpha)$ quantile of $\chi^2_{2m}$ for a chosen significance level $\alpha$: $g$ is refined if $T_{\mathrm{Weyl}}(g) > \chi^2_{2m}(1-\alpha)$. Unlike $R(g)$, which only aggregates per-axis statistics, $\mathcal{K}$'s sum/difference frequencies give $T_{\mathrm{Weyl}}$ sensitivity to cross-axis (e.g.\ diagonal) concentration; Section~\ref{sec:criteria-comparison} measures this directly. The cost is $O(nm) = O(nd)$ per evaluation, versus $O(n\cdot 2^d)$ for a literal $2^d$-orthant $\chi^2$ test.
+
+\subsubsection{The Random-Projection Criterion}
+
+An alternative to testing specific harmonics of $u$ is to test linear projections of $u$ directly. Fix a unit vector $v \in \mathbb{R}^d$ ($\|v\|_2=1$) and let $Y = v \cdot u$.
+
+\begin{proposition}[Exact projected null moments]
+\label{prop:proj-moments}
+If $u \sim \mathrm{Uniform}([0,1]^d)$, then $\mathbb{E}[Y] = \tfrac12\sum_j v_j$ and $\mathrm{Var}(Y) = \tfrac{1}{12}\|v\|_2^2 = \tfrac{1}{12}$, independent of $v$ and $d$. Moreover $Y \in [a(v), b(v)]$ with range $R(v) = b(v)-a(v) = \sum_j |v_j|$.
+\end{proposition}
+\begin{proof}
+$Y$ is a linear combination of independent $\mathrm{Uniform}[0,1]$ coordinates, so $\mathbb{E}[Y] = \sum_j v_j\,\mathbb{E}[u_j] = \tfrac12\sum_j v_j$ and $\mathrm{Var}(Y) = \sum_j v_j^2\,\mathrm{Var}(u_j) = \tfrac{1}{12}\sum_j v_j^2 = \tfrac{1}{12}\|v\|_2^2$. The extremes of $Y$ are attained at cube vertices, giving $a(v) = \sum_j \min(v_j,0)$, $b(v) = \sum_j \max(v_j,0)$.
+\end{proof}
+
+Unlike the Weyl statistic, $Y$'s distribution has no simple closed form for general $v$ (it is a weighted, generalized Irwin--Hall law), so rather than relying on an asymptotic approximation we use a finite-sample concentration bound.
+
+\begin{theorem}[Hoeffding, 1963]
+\label{thm:hoeffding}
+Let $Y_1,\ldots,Y_n$ be i.i.d.\ with $Y_i \in [a,b]$ and mean $\mu$. For any $t>0$,
+\[
+\Pr\big(|\bar{Y}_n - \mu| \geq t\big) \;\leq\; 2\exp\!\left(-\frac{2nt^2}{(b-a)^2}\right).
+\]
+\end{theorem}
+
+Fix $m$ random unit directions $v_1,\ldots,v_m$ (drawn once, independent of the data). For each $v_i$, apply Theorem~\ref{thm:hoeffding} twice: once to $Y=v_i\cdot u$ directly (a \emph{mean} sub-test against $\mu_0(v_i)=\tfrac12\sum_j v_{i,j}$), and once to $Z = (Y-\mu_0(v_i))^2 \in [0,R(v_i)^2]$ (a \emph{variance} sub-test against $\mathbb{E}[Z]=\tfrac{1}{12}$, using the exact null mean so $Z$ remains an i.i.d.\ bounded sequence under $H_0$). This yields $2m$ elementary tail bounds.
+
+\begin{corollary}[Finite-sample false-positive control]
+\label{cor:proj-fpr}
+Running each of the $2m$ elementary tests above at level $\alpha/(2m)$ and rejecting $H_0$ if any one rejects gives
+\[
+\Pr(\text{reject } H_0 \mid H_0) \;\leq\; \alpha
+\]
+for every finite $n$, by the union bound over the $2m$ elementary tail probabilities.
+\end{corollary}
+
+Corollary~\ref{cor:proj-fpr} is a strictly stronger guarantee, in one respect, than Theorem~\ref{thm:weyl-chisq}: it holds at \emph{every} $n$, not only asymptotically. The price is that Hoeffding's inequality uses only boundedness, not the true variance of $Y$ or $Z$, so it is loose; and since a random unit vector in $\mathbb{R}^d$ has $\mathbb{E}[\,|v_j|\,] = \Theta(1/\sqrt{d})$ per coordinate, its range grows as $R(v) = \Theta(\sqrt{d})$, appearing squared in the exponent's denominator. A fixed true deviation therefore becomes exponentially harder to detect, at fixed $n$, as $d$ grows — a concrete, quantifiable cost of the non-asymptotic guarantee, measured directly in Section~\ref{sec:criteria-comparison}. As with the Weyl criterion, $m$ directions cost $O(nm)=O(nd)$ per evaluation when $m$ is chosen $O(d)$, and are drawn once (fixed by a seed derived from $d$) rather than re-sampled per evaluation, so the criterion is deterministic and reproducible.
 
 \subsection{Contraction Criterion}
 
@@ -431,12 +507,13 @@ FixedGrid $n{=}32$                  & 797.8 & 0.667 & 0.594 & 0.53 \\
 \subsection{Effect of Dimensionality}
 \label{sec:dim-sweep}
 
-We repeated the comparison on the same stream family generalized to $d > 2$, with the two cluster centers orbiting in the first two coordinates and every additional dimension carrying pure isotropic noise, the standard curse-of-dimensionality stress case. This is a preliminary probe rather than a full multi-dimensional evaluation: it uses a single seed, $n = 400$ points (reduced from $2500$ for the same reason as Section~\ref{sec:results}'s experimental setup, and more acutely here since a split costs $O(2^{\dim})$ regardless of strategy and contraction adds a second full-tree pass every maintenance interval), and neither model's thresholds were retuned per dimension. At each dimension, the fixed grid's resolution was chosen so its total cell count lands near the adaptive method's $2500$-cell budget, so the comparison is roughly memory-matched rather than resolution-matched. Table~\ref{tab:dimsweep} and Figure~\ref{fig:dimsweep} summarize the outcome for $d \in \{2,3,4,5,6,8,10\}$.
+We repeated the comparison on the same stream family generalized to $d > 2$, with the two cluster centers orbiting in the first two coordinates and every additional dimension carrying pure isotropic noise, the standard curse-of-dimensionality stress case. This is a preliminary probe rather than a full multi-dimensional evaluation: it uses a single seed, $n = 400$ points (reduced from $2500$ for the same reason as Section~\ref{sec:results}'s experimental setup, and more acutely here since a split costs $O(2^{\dim})$ regardless of strategy and contraction adds a second full-tree pass every maintenance interval), and neither model's thresholds were retuned per dimension. At each dimension, the fixed grid's resolution was chosen so its total cell count lands near the adaptive method's $2500$-cell budget, so the comparison is roughly memory-matched rather than resolution-matched; past $d=15$ the fixed grid's own resolution floor of $n_{\text{cells per dim}}=2$ pushes its cell count itself past $2^{20}\approx 10^6$, at which point it is skipped rather than allocating a baseline whose shared-budget premise no longer holds (see Table~\ref{tab:dimsweep}, $d=20$). Table~\ref{tab:dimsweep} and Figure~\ref{fig:dimsweep} summarize the outcome for $d \in \{2,3,4,5,6,8,10,12,15,20\}$.
 
 \begin{table}[h]
 \centering
 \caption{Effect of dimensionality on peak memory and accuracy, at roughly matched memory budgets (varying-density stream, $n=400$, seed 7, single run per dimension).}
 \label{tab:dimsweep}
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{rlrrrr}
 \toprule
 Dim & Model & Cells & Peak memory (KB) & ARI & NMI \\
@@ -455,8 +532,15 @@ Dim & Model & Cells & Peak memory (KB) & ARI & NMI \\
 8  & \textbf{AdaptiveDStream} & 1531 & \textbf{1499.6} & 0.239 & 0.212 \\
 10 & FixedGrid ($n{=}2$)  & 1024 & 1053.5 & 0.030 & 0.159 \\
 10 & \textbf{AdaptiveDStream} & 1024 & \textbf{1272.8} & 0.047 & 0.116 \\
+12 & FixedGrid ($n{=}2$)  & 4096  & 4465.9  & 0.393  & 0.405 \\
+12 & \textbf{AdaptiveDStream} & \textbf{1}  & \textbf{2.5}  & 0.000  & 0.005 \\
+15 & FixedGrid ($n{=}2$)  & 32768 & 38833.3 & 0.029  & 0.121 \\
+15 & \textbf{AdaptiveDStream} & \textbf{1}  & \textbf{2.5}  & -0.000 & 0.005 \\
+20 & FixedGrid ($n{=}2$)  & \multicolumn{4}{c}{skipped: $2^{20}$ cells exceeds the shared-budget comparison's validity} \\
+20 & \textbf{AdaptiveDStream} & \textbf{1}  & \textbf{2.6}  & -0.000 & 0.005 \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \begin{figure}[h]
@@ -469,7 +553,53 @@ Dim & Model & Cells & Peak memory (KB) & ARI & NMI \\
 
 Two patterns emerge, both consistent with the earlier ($n=2500$) run but sharper. First, the memory hypothesis behind the method holds more strongly than before: from $d=2$ to $d=8$, AdaptiveDStream now uses only 7--24\% of the budget-matched fixed grid's memory (143~KB vs.\ 1950~KB at $d=2$; 1500~KB vs.\ 6334~KB at $d=8$), a larger relative gap than the earlier run's 35--87\%, since contraction reclaims memory from stale splits on top of the \texttt{max\_cells} cap that was already present. The fixed grid still cannot be tuned finely to a memory budget at high dimension, for the same reason as before: $n_{\text{cells per dim}}$ only moves in coarse integer steps, so at $d=8$ the jump from $n=2$ (256 cells) to $n=3$ (6561 cells) overshoots the 2500-cell target by 2.6$\times$. At $d=10$ the fixed grid again drops under budget (1054~KB) purely because $n_{\text{cells per dim}}$ bottoms out at 2, and AdaptiveDStream (1273~KB) is again the larger of the two there.
 
-Second, AdaptiveDStream remains dominated in accuracy for $d=2$--$6$, and the gap narrows at $d=8$ exactly as before (ARI 34\% of the fixed grid's, up from single digits at low dimension) — consistent with the unchanged root cause (Section~\ref{sec:root-cause}): a split fragments mass across $2^d$ children, a far harsher penalty at $d=8$ (256-way) than at $d=2$ (4-way), and the dense threshold remains an absolute count regardless of contraction or transitional assignment. At $d=10$, AdaptiveDStream (0.047) nominally exceeds the fixed grid (0.030) for the first time — but the fixed grid's own ARI collapsed sharply relative to the earlier, larger-sample run (0.486 there vs.\ 0.030 here), most plausibly a small-sample artifact of an $n{=}2$-per-axis grid at only 400 points, not evidence that AdaptiveDStream overtook it on merit. Given the single seed, untuned per-dimension thresholds, and the smaller sample size used here, we treat this dimensionality result as a preliminary signal worth pursuing rather than a validated finding, and read the $d=10$ reversal specifically as noise.
+Second, AdaptiveDStream remains dominated in accuracy for $d=2$--$6$, and the gap narrows at $d=8$ exactly as before (ARI 34\% of the fixed grid's, up from single digits at low dimension) — consistent with the unchanged root cause (Section~\ref{sec:root-cause}): a split fragments mass across $2^d$ children, a far harsher penalty at $d=8$ (256-way) than at $d=2$ (4-way), and the dense threshold remains an absolute count regardless of contraction or transitional assignment. At $d=10$, AdaptiveDStream (0.047) nominally exceeds the fixed grid (0.030) for the first time — but the fixed grid's own ARI collapsed sharply relative to the earlier, larger-sample run (0.486 there vs.\ 0.030 here), most plausibly a small-sample artifact of an $n{=}2$-per-axis grid at only 400 points, not evidence that AdaptiveDStream overtook it on merit. Given the single seed, untuned per-dimension thresholds, and the smaller sample size used here, we treat this dimensionality result at $d\le 10$ as a preliminary signal worth pursuing rather than a validated finding, and read the $d=10$ reversal specifically as noise.
+
+Third, and the reason this sweep was extended past $d=10$: at $d=12$ the root's admission check for a split (projected leaf count $\le$ \texttt{max\_cells}$=2500$) is refused outright, since $2^{12}=4096$ alone already exceeds the budget before any refinement criterion is even evaluated. AdaptiveDStream is left with exactly one leaf, the whole domain, at $d=12,15,20$ (Table~\ref{tab:dimsweep}), and its ARI collapses to $0$ accordingly — a single-cluster prediction against genuinely two-cluster ground truth. This is architectural, not a criterion failure: no refinement statistic, however well calibrated (Section~\ref{sec:alt-criteria}), can influence a split decision that is vetoed before it runs. Reaching real-data dimensionality (e.g.\ the $\sim$41 features of KDD Cup~99) therefore requires the split rule itself to stop enumerating all $2^d$ children at once — splitting a single chosen axis, or the top-$k$ axes ranked by per-axis non-uniformity evidence, are the natural candidates — independent of, and prior to, which equidistribution criterion drives the decision. We return to this in the Future Work section below.
+
+\subsection{Single-Cell Equidistribution Criteria Comparison}
+\label{sec:criteria-comparison}
+
+Sections~\ref{sec:proposed-method-refinement}--\ref{sec:alt-criteria} introduce three criteria for the same question — is a cell's data locally equidistributed? — with different cost/guarantee profiles: $R(g)$ (moments, $O(1)$ streaming, no calibration guarantee), $T_{\mathrm{Weyl}}(g)$ (asymptotically exact chi-square calibration, $O(nd)$), and the random-projection test (exact finite-sample calibration, also $O(nd)$). This experiment isolates that question from the tree/split/merge machinery entirely: each criterion is scored on a batch of $n=400$ points drawn directly from a known box, with no cell splitting involved, so the comparison is not confounded by the $2^d$-split wall of Section~\ref{sec:dim-sweep}.
+
+Five synthetic shapes were used: \texttt{uniform} ($H_0$), \texttt{core\_border\_imbalance} (a uniform core plus two opposite-face border slabs at different densities from each other), \texttt{diagonal\_correlated} (points in a thin band around the main diagonal — every 1-D marginal looks close to uniform while the joint distribution is highly concentrated), \texttt{symmetric\_bimodal} (two Gaussian blobs symmetric about the box center along one axis, chosen so the mean is exact and the variance is close to the uniform value), and \texttt{corner\_spike} (a point-mass concentration in one corner plus uniform background). Discriminative power is reported as ROC-AUC (uniform vs.\ each shape, $R=60$ repeats), which compares the three criteria without requiring their very differently scaled thresholds to be matched. Figure~\ref{fig:criteria-auc} and Table~\ref{tab:criteria-auc} summarize the results across $d \in \{2,5,10,15,20\}$ (averaged over dimension in the table; see the figure for the per-dimension trend).
+
+\begin{table}[h]
+\centering
+\caption{ROC-AUC (uniform vs.\ shape), averaged over $d\in\{2,5,10,15,20\}$, $n=400$, $R=60$ repeats per cell. Bold marks the best criterion per shape.}
+\label{tab:criteria-auc}
+\begin{tabular}{lrrr}
+\toprule
+Shape & $R(g)$ (moment) & $T_{\mathrm{Weyl}}$ & Random projection \\
+\midrule
+core\_border\_imbalance      & \textbf{0.995} & \textbf{0.999} & 0.543 \\
+core\_border\_imbalance\_diag & \textbf{1.000} & \textbf{1.000} & 0.903 \\
+diagonal\_correlated          & 0.419          & \textbf{1.000} & 0.508 \\
+symmetric\_bimodal            & \textbf{0.902} & 0.477          & 0.500 \\
+corner\_spike                 & \textbf{1.000} & \textbf{1.000} & \textbf{1.000} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/cell_equidistribution_auc.png}
+\caption{ROC-AUC by shape and dimension for the three refinement criteria. Random projection's power on the two border-imbalance shapes visibly collapses toward chance as dimension grows, exactly as Theorem~\ref{thm:hoeffding}'s discussion predicts ($R(v)=\Theta(\sqrt{d})$ weakens the bound); Weyl's power does not.}
+\label{fig:criteria-auc}
+\end{figure}
+
+No criterion dominates. $T_{\mathrm{Weyl}}$ is the only one of the three that detects \texttt{diagonal\_correlated} at any dimension (AUC $1.000$ throughout, versus chance-level $0.42$--$0.54$ for both others), the direct payoff of including cross-axis sum/difference frequencies in $\mathcal{K}$ rather than only per-axis statistics. Conversely, $R(g)$ is the best criterion on \texttt{symmetric\_bimodal}; $T_{\mathrm{Weyl}}$'s near-chance AUC there ($0.38$--$0.53$ across dimension) is not a general weakness but a specific, verified coincidence — the shape's default separation of $0.25$ box-widths from center puts $\cos(2\pi \cdot 0.25)=0$ exactly, a null harmonic of the $k=1$ axis frequency, and re-running at separation $0.15$ (where $\cos(2\pi\cdot 0.15)\approx 0.59$) restores $T_{\mathrm{Weyl}}$'s AUC to $1.000$ at every dimension tested. This is a known, citable property of Fourier/Neyman-smooth goodness-of-fit tests: a finite frequency set has blind directions, alternatives whose signal lies entirely in an untested harmonic.
+
+The random-projection criterion is the weakest of the three at this sample size, at chance level on every shape except the crude \texttt{corner\_spike} case, and its already-limited power on the two border-imbalance shapes falls further as dimension grows (Figure~\ref{fig:criteria-auc}), from AUC $\approx 1.0$ at $d=2$ to $\approx 0.5$ by $d=10$--$15$. This is the direct, measured cost of Corollary~\ref{cor:proj-fpr}'s non-asymptotic guarantee discussed in Section~\ref{sec:alt-criteria}: for a random unit direction in $\mathbb{R}^d$, the Hoeffding range $R(v)=\Theta(\sqrt{d})$ enters squared in the tail bound's exponent, so a fixed true deviation becomes exponentially harder to certify at fixed $n$ as $d$ grows. It is also structurally blind to \texttt{diagonal\_correlated} regardless of dimension, since that shape is symmetric about the box center along every direction by construction, so a mean-based sub-test cannot see it and the variance sub-test's signal along a generic (non-diagonal-aligned) direction is too weak, at $n=400$, to clear Hoeffding's conservative bound.
+
+We draw two conclusions for the method as a whole. First, the three criteria have complementary, not overlapping, blind spots, which argues for combining them (e.g.\ via Fisher's method on independent $p$-values) rather than selecting one; we leave this for future work. Second, the false-positive calibration promised in Section~\ref{sec:alt-criteria} holds empirically, not only asymptotically: across $n\in\{50,\ldots,6400\}$ at $d=10$, $T_{\mathrm{Weyl}}$'s empirical false-positive rate under true $H_0$ stayed within $0.033$--$0.070$ of its nominal $\alpha=0.05$ at every $n$ (Figure~\ref{fig:criteria-calibration}), while the random-projection criterion's was $0$ throughout — strictly within, and well under, its $\le \alpha$ bound, confirming Corollary~\ref{cor:proj-fpr} is valid and, as its proof anticipates, conservative. $R(g)$'s own fixed threshold ($\tau_{\text{split}}=0.04$) showed $0$ false positives in this batch (no-decay) setting at every $n$ tested, but this is not because it is well-calibrated in the same sense: repeating the check with the model's actual time-decayed statistic (Section~\ref{sec:proposed-method-decay}) shows the safety margin depends on the decay factor $\lambda$, not on $n$ — at $\lambda=0.995$ (this paper's default) no spurious split occurred in $100$ runs of $20{,}000$ uniform points, but at $\lambda=0.8$ every run eventually produced one, since decay caps the effective sample size at $1/(1-\lambda)$ regardless of stream length. A principled threshold for $R(g)$ would therefore be a function of $1/(1-\lambda)$, the way $T_{\mathrm{Weyl}}$'s threshold is a function of $(n,m)$, rather than a single constant assumed safe at every decay setting.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.6\textwidth]{figures/cell_equidistribution_calibration.png}
+\caption{Empirical false-positive rate under true $H_0$ versus sample size $n$ (batch, no decay), $d=10$. $T_{\mathrm{Weyl}}$ tracks its nominal $\alpha=0.05$ at every $n$; the random-projection criterion stays at or near $0$, strictly under its $\le\alpha$ bound; $R(g)$'s fixed threshold shows $0$ false positives here but is not calibrated in the same sense (see discussion above).}
+\label{fig:criteria-calibration}
+\end{figure}
 
 \subsection{Cross-Regime Generalization}
 \label{sec:regime-sweep}
@@ -480,6 +610,7 @@ The frontier and dimensionality results above answer "accuracy versus memory on 
 \centering
 \caption{Adjusted Rand Index by model and regime ($n=500$, seed 7). Bold marks \texttt{AdaptiveDStream}, the proposed method.}
 \label{tab:regime-ari}
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{lrrrrrr}
 \toprule
 Regime & FixedGrid $n{=}8$ & FixedGrid $n{=}32$ & \textbf{AdaptiveDStream} & DenStream & CluStream & DBSTREAM \\
@@ -490,7 +621,8 @@ density\_drift       & 0.450 & 0.318 & \textbf{0.109} & 0.611 & 0.354 & 0.422 \\
 two\_gaussian\_drift & 0.460 & 0.008 & \textbf{0.041} & 0.384 & 0.340 & 0.063 \\
 moons\_drift         & 0.004 & 0.001 & \textbf{0.004} & 0.043 & 0.116 & 0.010 \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \begin{figure}[h]

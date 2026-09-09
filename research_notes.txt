@@ -1,0 +1,538 @@
+ADAPTIVE D-STREAM RESEARCH NOTES
+Running log of the equidistribution-testing discussion with Claude.
+Plain text, meant to be re-pasted into a future chat as context.
+Last updated: 2026-09-09
+
+================================================================
+1. THE CORE QUESTION THE PAPER IS ORGANIZED AROUND
+================================================================
+Given a data stream landing in one axis-aligned box (a "cell" of the
+adaptive grid), approximately answer: is the local data equidistributed
+(uniform) in this cell, or not? This is framed as the first of three
+separable sub-algorithms, each independently analyzable:
+
+  1. EQUIDISTRIBUTION TEST: is this cell's data locally uniform?
+  2. EXPANSION RULE: once judged non-uniform, how to split (which axis/axes,
+     not necessarily all of them at once)?
+  3. CELL AWARENESS: do neighboring cells agree with each other, so a
+     contraction/merge is justified even if neither looks uniform in
+     isolation?
+
+Framing all three as instances of one underlying template turned out to be
+the useful unifying idea (see section 4).
+
+================================================================
+2. THE ARCHITECTURAL WALL FOUND IN THE EXISTING CODE
+================================================================
+`AdaptiveDStream._split()` (src/adaptive_dstream/model.py) splits every
+dimension of a cell at once: `itertools.product([0,1], repeat=dim)`, i.e.
+one split produces 2**dim children. This is confirmed expensive even in the
+repo's own comments (run_dimension_sweep.py: dim=10 at n=600 took "over two
+minutes" during calibration).
+
+Consequence: `_should_split` gates every split behind
+`projected_leaf_count <= max_cells` BEFORE the split happens. With the
+default max_cells=2500, 2**dim already exceeds 2500 once dim >= 12
+(2**12 = 4096), so from dim>=12 on, the root is architecturally unable to
+split even once -- it degenerates to "the whole domain is one cell",
+regardless of what any uniformity criterion says. This was verified
+empirically this session (see section 6).
+
+KDD Cup 99 has ~41 features -- confirmed correct. This means: before any
+better equidistribution *test* matters, the *split rule* itself needs to
+stop being full-orthant. Candidate fixes discussed (not yet implemented):
+  - binary/kd-tree-style split on a single chosen axis
+  - split only the top-k axes ranked by per-axis non-uniformity evidence
+  - split along the top principal direction of a tracked covariance matrix
+  - random/hashed subspace splitting
+This is flagged as a PREREQUISITE for reaching real-data dimensionality
+(d~40), separate from and prior to the choice of test statistic.
+
+================================================================
+3. CANDIDATE EQUIDISTRIBUTION TESTS DISCUSSED (BEYOND MEAN/VARIANCE)
+================================================================
+Current production criterion (cell.py: GridCell.refinement_score): compares
+tracked mean to cell center and tracked variance to the uniform value
+1/12 * side_length^2. Cheap (O(1) streaming update via decayed sufficient
+stats s0/s1/s2), but a pure moment proxy -- blind to same-mean/same-variance
+shape differences (e.g. correlation, symmetric bimodality), and has no
+formal null distribution (its split_threshold is a tuned constant).
+
+Alternatives discussed, roughly in the order raised:
+
+- HIGHER MOMENTS (skewness, kurtosis): cheapest extension, same streaming
+  machinery (add s3/s4). Uniform's excess kurtosis is exactly -6/5, so a
+  bimodal-but-same-variance shape is visible here even though variance
+  alone misses it.
+
+- CHI-SQUARE / ENTROPY ON SUB-ORTHANTS: bin into the same 2**d children the
+  split would produce, compare counts to n/2**d. Has a real asymptotic
+  null (chi-square), but shares the split rule's exponential-in-d cost --
+  same wall as section 2 for the *test*, not just the split.
+
+- SPACE-FILLING CURVE + 1D TEST: Hilbert-curve map to a scalar, then a
+  classic 1D spacings/KS test. Sidesteps the 2**d blowup; needs an
+  order-statistics streaming sketch (KLL, t-digest, or a bottom-k/KMV
+  sketch -- see section 4).
+
+- RANDOM PROJECTIONS: project onto a few random directions; the null for a
+  projected uniform box is a generalized Irwin-Hall distribution (closed
+  form; Gaussian by CLT as d grows, mean = v.center, variance =
+  sum(v_i^2 * w_i^2)/12). Catches correlation/diagonal structure that
+  per-axis tests miss by construction. NOTE: a random projection binned
+  into width-w buckets IS the standard Euclidean LSH family
+  (Datar-Immorlica-Indyk-Mirrokni 2004, "p-stable LSH") -- these are the
+  same tool, not two separate ones.
+
+- DISCREPANCY THEORY (star / L2-discrepancy): the actual formal definition
+  of "equidistributed" (Weyl's equidistribution theorem: D_n* -> 0). L2
+  discrepancy has a closed form via pairwise point distances (Warnock's
+  formula, 1972), O(n^2*d) -- too expensive to run live, but valuable as an
+  OFFLINE ground-truth benchmark: validate cheap streaming proxies against
+  it on synthetic data with dial-able non-uniformity (Spearman correlation
+  or AUC).
+
+- SPATIAL STATISTICS / COMPLETE SPATIAL RANDOMNESS (CSR): reframe "is this
+  uniform" as "is this consistent with a homogeneous Poisson process".
+  Ripley's K-function (K(r) proportional to r^d under CSR) / L-function,
+  or the cheaper Clark-Evans nearest-neighbor index (has a known
+  asymptotically-normal null -> real z-score). Important distinction this
+  framing gives that variance alone cannot: CLUSTERING (points closer than
+  CSR predicts, the thing we want to detect) vs REGULARITY/INHIBITION
+  (points more evenly spread than random, e.g. near-lattice) -- both are
+  "not uniform" by variance but are opposite phenomena, and only one
+  probably warrants splitting.
+
+- PROPERTY TESTING / DISTRIBUTION TESTING (theoretical CS): the field whose
+  literal subject is "approximately decide if a distribution is uniform"
+  with sublinear sample complexity and formal soundness/completeness
+  guarantees (Batu-Fischer-Rubinfeld, Paninski). Canonne's survey "Topics
+  and Techniques in Distribution Testing" is the recommended entry point --
+  flagged as genuinely worth reading, not just citing.
+
+- WEYL SUMS / EQUIDISTRIBUTION THEOREM (IMPLEMENTED THIS SESSION): see
+  section 5. Weyl's 1916 criterion: a sequence is equidistributed iff
+  (1/n) sum exp(2*pi*i*k.x_j) -> 0 for every nonzero integer frequency
+  vector k. This is the headline new criterion added this session, with a
+  genuine asymptotic chi-square null (see section 5).
+
+- HIGHER-ORDER FOURIER ANALYSIS / GOWERS NORMS U^k: the theoretically
+  "correct" next rung above linear Weyl sums / random projections, needed
+  to catch structure invisible to any linear functional (e.g. data
+  concentrated on a curved/quadratic manifold). DELIBERATELY NOT PURSUED:
+  no efficient closed-form/algorithm for U^k, k>=3, on continuous point
+  clouds (native setting is finite abelian groups / ergodic systems, not
+  R^d boxes); would need discretization first, reintroducing the curse of
+  dimensionality it's meant to avoid. Recommended treatment: mention in
+  related-work/future-work as the top of the hierarchy this line of work
+  sits at the bottom of (0th order = mean/variance, 1st order = Weyl
+  sums/random projections, higher order = Gowers norms), not implement.
+  Cheaper proxy for the same failure mode (curved-manifold concentration):
+  local PCA eigenvalue gaps, or projecting onto pairwise-product features
+  x_i*x_j before a 1D test.
+
+================================================================
+4. THE HASH-BASED UNIFYING TEMPLATE
+================================================================
+Traced to Sanjeev Arora's COS521 (Princeton) Lecture 5, "Hashing with real
+numbers" (https://www.cs.princeton.edu/courses/archive/fall14/cos521/lecnotes/lec5.pdf).
+That lecture is specifically about two things (not a general JL/LSH survey):
+  (a) cardinality estimation via min-hash registers (Flajolet-Martin,
+      1985): hash to [0,1], keep the running minimum, use
+      E[min of N uniforms] = 1/(N+1) to back out N.
+  (b) MinHash / Jaccard similarity estimation (Broder, 1997): hash of a set
+      = min hash value over its elements; collision probability between two
+      sets' minhashes exactly equals their Jaccard similarity.
+
+The transferable insight: (a) is a template --
+  "push each point through a hash/transform phi; maintain an O(1) streaming
+   register of phi-values (a min, a mean, a bucket count); compare the
+   register's observed value to its closed-form value under the uniform
+   null; the gap is the non-uniformity statistic."
+Every criterion discussed (moments, chi-square-on-buckets, random
+projections/LSH, Weyl sums, order-statistics/bottom-k sketches) is one
+instantiation of this same template, differing only in phi and which
+moment of the register is checked -- worth stating as one unifying lemma in
+the paper rather than presenting them as unrelated alternatives.
+
+(b)'s MinHash/Jaccard idea repurposes directly for CROSS-CELL AWARENESS
+(sub-problem 3, section 1): represent each cell's occupied fine sub-buckets
+as a set, take a MinHash signature, estimate Jaccard similarity between two
+face-adjacent cells' signatures without comparing full point sets. High
+similarity => the split boundary isn't doing anything => merge candidate.
+NOT YET IMPLEMENTED -- flagged as the natural next addition for
+sub-problem 3, which the current code (model.py: _contract_recursive) does
+not address at all (it only looks at a cell's own children's scores, never
+at neighbors, despite already computing face-adjacency for clustering via
+_cells_touch_by_face).
+
+Also relevant, not yet implemented: bottom-k / K-Minimum-Values (KMV)
+sketches (Bar-Yossef et al. 2002; Cohen 1997) generalize the single-min
+Flajolet-Martin register to a small set of order statistics, giving a
+richer, rigorously-bounded streaming uniformity test (spacings/Greenwood
+statistic) than tracking only the minimum.
+
+Count-Min sketch: infrastructure, not a test by itself. One-sided
+overestimation via collisions makes it good at flagging heavy hitters/point
+masses (exactly the corner_spike scenario, section 6), but collisions blur
+the fine structure needed to tell "uniform" from "slightly lumpy" -- treat
+as a secondary spike-detector layered on top of a real uniformity test, not
+the primary criterion.
+
+================================================================
+5. WEYL EQUIDISTRIBUTION TEST -- IMPLEMENTED AND VALIDATED THIS SESSION
+================================================================
+File: src/adaptive_dstream/criteria.py, function
+weyl_equidistribution_score() (+ default_weyl_frequencies, weyl_threshold).
+
+Math (full derivation is in the module docstring): rescale a cell's points
+into u in [0,1]^dim. For a nonzero INTEGER frequency vector k, the
+characters exp(2*pi*i*k.u) are an orthonormal basis of L^2([0,1]^d), which
+gives, under u ~ Uniform([0,1]^d), EXACTLY (not just asymptotically):
+  E[phi_k] = 0,  E[|phi_k|^2] = 1  =>  Var(Re phi_k)=Var(Im phi_k)=1/2
+and for two distinct nonzero integer k != +-k', every cross second moment
+between (Re phi_k, Im phi_k) and (Re phi_k', Im phi_k') is exactly zero too.
+So the per-frequency statistic T_k = 2*n*|S_k|^2 (S_k = sample mean of
+phi_k) is asymptotically chi-square(2), and summed across m frequencies,
+T = sum_k T_k is asymptotically chi-square(2m) under H0 -- a REAL
+significance level, not a tuned constant. This directly answers "how do
+you choose the threshold" for this criterion (section 8).
+
+Default frequency set (default_weyl_frequencies): d axis-unit vectors
+(catches per-axis marginal non-uniformity) + for each consecutive axis pair,
+a "sum" and "difference" frequency (catches correlation/diagonal
+structure) -- size grows LINEARLY in d (3d-2), unlike a 2**d orthant test.
+Cost is O(n*d) per cell, not O(n*2**d) -- this specifically fixes the
+dimensionality problem for the TEST (independent of, and does not by
+itself fix, the split-rule wall in section 2).
+
+VALIDATED empirically (this session): empirical false-positive rate under
+true uniformity tracks the nominal alpha=0.05 closely across dim in
+{2,5,10,20} and n in {100,500,2000} (observed range ~0.025-0.07,
+consistently close to 0.05) -- the calibration is real, not just asymptotic
+theory. See outputs/cell_equidistribution_calibration.png.
+
+================================================================
+6. SYNTHETIC SINGLE-CELL SHAPES ADDED (PHASE 1 EVALUATION)
+================================================================
+File: src/adaptive_dstream/cell_shapes.py -- generators for exactly the
+"is this ONE cell equidistributed" question, separate from the existing
+multi-phase streaming generators in synthetic.py (which are for the
+end-to-end clustering evaluation, "phase 2"). All return points in the unit
+box [0,1]^dim.
+
+  - uniform: H0 baseline.
+  - core_border_imbalance: uniform core + two thin border slabs at OPPOSITE
+    faces with DIFFERENT densities from each other (the paper's headline
+    stress case -- "a cluster's center looks fine, its two edges disagree
+    with each other"). axis="diag" variant places it along the main
+    diagonal via a shared additive shift -- empirically this did NOT turn
+    out to be axis-blind (both criteria detect it at AUC~1; the shared
+    shift still perturbs every marginal), kept as an easier sanity check,
+    not the hard case.
+  - diagonal_correlated: points in a thin band around the main diagonal --
+    THIS is the shape that actually isolates the axis-blind case cleanly
+    (see results below).
+  - symmetric_bimodal: two Gaussian blobs symmetric about the box center
+    along one axis -- "same moments (roughly), different shape" case.
+  - corner_spike: point-mass concentration in one corner + uniform
+    background -- the heavy-hitter/Count-Min-relevant case.
+
+Evaluation script: examples/run_cell_equidistribution_sweep.py. Compares
+moment_refinement_score vs weyl_equidistribution_score via ROC-AUC
+(uniform vs. each shape) across dim in {2,5,10,15,20}, n=400, 60 repeats
+per cell; plus a false-positive-rate calibration sweep at dim=10 across
+n in {50,...,6400}. Outputs: outputs/cell_equidistribution_auc.{json,png},
+outputs/cell_equidistribution_calibration.png.
+
+HEADLINE RESULTS (this session's run, R=60 repeats, n=400):
+  - core_border_imbalance:      moment AUC 0.97-1.00, weyl AUC 0.99-1.00  (both catch it, "easy" case)
+  - core_border_imbalance_diag: moment AUC 1.00,       weyl AUC 1.00       (both catch it -- not actually the hard case, see above)
+  - diagonal_correlated:        moment AUC 0.38-0.54  (CHANCE LEVEL, every dim tested)
+                                 weyl   AUC 1.00        (PERFECT, every dim tested, d=2 through d=20)
+    => clean, dimension-independent demonstration that mean/variance is
+       structurally blind to correlation-driven non-uniformity, exactly as
+       predicted theoretically, while the Weyl test (via its
+       sum/difference cross-axis frequencies) catches it completely.
+  - symmetric_bimodal:          moment AUC 0.78-0.995 (good, catches it)
+                                 weyl   AUC 0.43-0.53  (near chance -- see caveat below)
+  - corner_spike:                moment AUC 1.00, weyl AUC 1.00 (both catch it, "easy" case)
+
+IMPORTANT CAVEAT on symmetric_bimodal (verified, not a bug): the default
+separation=0.25 for that shape lands EXACTLY on a null harmonic of the k=1
+Weyl frequency -- cos(2*pi*0.25) = 0 exactly, so the two symmetric blobs at
+0.5+-0.25 produce IDENTICAL cos(2*pi*x) values and the k=1 frequency sees
+zero signal by pure coincidence of the chosen parameter. This is a real,
+general, citable property of Fourier/Neyman-smooth goodness-of-fit tests:
+a finite frequency set has "blind directions" -- alternatives whose signal
+lies entirely in an untested harmonic (here, k=2 would have caught it,
+cos(4*pi*0.25) = cos(pi) = -1, but k=2 is not in the default frequency
+set). CONCLUSION FOR THE PAPER: moment-based and Weyl-based criteria have
+DIFFERENT, complementary blind spots -- neither dominates uniformly. This
+is a stronger, more defensible finding than "the new criterion wins".
+CONFIRMED: re-ran symmetric_bimodal at separation=0.15 (cos(2*pi*0.15)=0.588,
+well off the k=1 null) at dim in {5,10}, R=60: weyl AUC jumped from
+0.45-0.49 (at separation=0.25) to 1.000, matching moment's AUC of 1.000 at
+the same setting. This confirms the blind spot is exactly the mechanism
+described above (a coincidental alignment with the default parameter, not a
+general weakness of the Weyl test) and is worth stating explicitly as a
+controlled ablation in the paper, not just the raw separation=0.25 numbers.
+Not yet done: extend default_weyl_frequencies with k=2 harmonics and
+re-measure at separation=0.25 (raises dof/m, a real power/multiple-testing
+tradeoff worth characterizing rather than just adding).
+
+================================================================
+7. PHASE 2 (FULL CLUSTERING) DIMENSION SWEEP -- EXTENDED TO d=20
+================================================================
+File: examples/run_dimension_sweep.py, DIMS extended from
+[2,3,4,5,6,8,10] to [...,12,15,20]. Added FIXED_GRID_CELL_CAP=200_000 guard:
+FixedGridDStream eagerly allocates n_cells_per_dim**dim GridCell objects at
+construction (baselines.py), and its "budget-matched" resolution formula
+floors at n_cells_per_dim=2, so at dim=20 it would try to allocate 2**20 ~
+1,048,576 cells -- skipped above the cap rather than silently burning
+minutes/GB on a comparison whose shared-budget premise no longer holds at
+that point anyway.
+
+Expected/predicted finding (per section 2): AdaptiveDStream's root should
+be architecturally unable to split at all once dim >= 12 (2**12=4096 >
+max_cells=2500), degenerating to a single root cell regardless of what any
+criterion says. [Run was in progress at last save of this file -- check
+outputs/dimension_sweep_results.json and outputs/dimension_sweep_{memory,ari}.png
+for the actual numbers once complete, and update this note with the
+confirmed result.]
+
+================================================================
+8. THRESHOLD SELECTION -- THE GENERAL ANSWER
+================================================================
+User's question: "algorithms are sensitive to threshold choice -- how do
+you choose the right one?"
+
+General recipe (Neyman-Pearson-style calibration), demonstrated concretely
+this session for the Weyl criterion: derive or simulate the statistic's
+null distribution (here: chi-square(2m), derived exactly, see section 5),
+pick the threshold as its (1-alpha) quantile for a chosen significance
+level alpha, and VALIDATE via simulation that the achieved false-positive
+rate actually matches the nominal alpha (done -- section 5, calibration
+plot). This generalizes to any ad hoc statistic that lacks a closed-form
+null: simulate the statistic under a realistic H0 (uniform-in-a-box, at the
+sample sizes/decay actually used), and set the threshold to the empirical
+(1-alpha) quantile of that simulated null, then re-validate periodically
+since decay/sample-size assumptions can drift.
+
+Empirical finding this session for the CURRENT moment-score threshold
+(0.04, decay=0.995): under true uniformity, the batch (no-decay) version of
+the score shrinks like the estimator's own O(1/sqrt(n)) convergence, so
+false-positive rate at threshold 0.04 was measured at essentially 0 even at
+n=12800 -- no "more data causes spurious splits" paradox in the batch
+setting.
+
+CONFIRMED via the decayed-streaming version (GridCell.update with decay,
+T=20000 points, dim=10, 100 repeats per decay value) -- the "paradox" is
+real, but it is governed by DECAY (which caps effective sample size at
+~1/(1-decay), so the noise floor never shrinks no matter how long the
+stream runs), not by raw data volume:
+
+    decay   eff_n~1/(1-decay)   P(spurious split over T=20000)   max score seen
+    0.995   200                 0.000                            0.027
+    0.99    100                 0.000                            0.027
+    0.95     20                 0.000                            0.029
+    0.9      10                 0.020                            0.041
+    0.8       5                 1.000                            0.068
+
+At the repo's production defaults (decay=0.995, threshold=0.04) the method
+is safe -- but only because 0.04 happens to sit far above the noise floor
+at that specific decay. That safety margin is an ACCIDENT of the chosen
+constant, not a property of the method: push decay to 0.9 (a reasonable
+choice if faster drift-adaptation is wanted) and spurious splits start
+appearing; push it to 0.8 and every run eventually splits a perfectly
+uniform cell. This is exactly the general point in this section: a
+principled threshold would be derived from the known effective sample size
+1/(1-decay) (computable in closed form for geometric decay) and the number
+of times the criterion gets evaluated, the way the Weyl test's chi-square
+threshold is derived from n and m -- not a single constant assumed to work
+across all decay settings.
+
+================================================================
+9. OTHER FIXES THIS SESSION
+================================================================
+- latex/main.tex: two tables (tab:dimsweep, tab:regime-ari) were wider than
+  the text width and rendered with content cut off. Wrapped both in
+  \resizebox{\textwidth}{!}{...} (graphicx was already loaded). Could not
+  compile locally to visually confirm (no pdflatex/latexmk installed in
+  this environment) -- recompile and check before submitting.
+
+================================================================
+10. READING LIST
+================================================================
+- Weyl, H. (1916). "Uber die Gleichverteilung von Zahlen mod. Eins." --
+  the original equidistribution theorem/criterion.
+- Flajolet, P. & Martin, G.N. (1985). "Probabilistic counting algorithms
+  for data base applications." -- the min-hash-register cardinality trick.
+- Broder, A.Z. (1997). "On the resemblance and containment of documents." --
+  MinHash / Jaccard similarity.
+- Broder, Charikar, Frieze, Mitzenmacher (1998). "Min-wise independent
+  permutations." STOC.
+- Bar-Yossef et al. (2002) or Cohen, E. (1997) -- bottom-k / KMV sketches,
+  rigorous order-statistic variance bounds.
+- Datar, Immorlica, Indyk, Mirrokni (2004). "Locality-Sensitive Hashing
+  Scheme Based on p-Stable Distributions." -- the correct citation for
+  "random projection as LSH."
+- Cormode, G. & Muthukrishnan, S. (2005). "An improved data stream
+  summary: the Count-Min sketch and its applications."
+- Warnock, T.T. (1972) -- closed-form L2-discrepancy via pairwise point
+  distances; see also Niederreiter's book on quasi-Monte Carlo, and
+  Chazelle, B., "The Discrepancy Method" (2000) for the general theory.
+- Ripley, B.D. (1976, 1977) -- the K-function for spatial point processes;
+  Clark, P.J. & Evans, F.C. (1954) -- the nearest-neighbor CSR index.
+- Canonne, C. (survey, updated periodically) "Topics and Techniques in
+  Distribution Testing" -- recommended as an actual read, not just a
+  citation, for the property-testing framing of "is this uniform".
+- Cuesta-Albertos, Fraiman, Ransford, and follow-ups -- random-projection-
+  based multivariate goodness-of-fit tests (the formal backing for the
+  random-projection idea in section 3).
+- Terence Tao's blog, tag "Weyl equidistribution theorem"
+  (https://terrytao.wordpress.com/tag/weyl-equidistribution-theorem/) --
+  background on inverse theorems / higher-order Fourier analysis (Gowers
+  norms), read for pedigree/context, not for anything to implement (see
+  section 3's Gowers-norms entry for why).
+
+================================================================
+11. FILES ADDED/CHANGED THIS SESSION (for quick orientation)
+================================================================
+  src/adaptive_dstream/criteria.py           NEW  moment + Weyl criteria
+  src/adaptive_dstream/cell_shapes.py        NEW  5 single-cell synthetic shapes
+  examples/run_cell_equidistribution_sweep.py NEW  phase-1 evaluation (AUC + calibration)
+  examples/run_dimension_sweep.py            EDIT extended DIMS to 20, added FixedGrid guard
+  src/adaptive_dstream/__init__.py           EDIT exported the new criteria/shapes API
+  latex/main.tex                             EDIT resizebox on two overflowing tables
+  outputs/cell_equidistribution_auc.json     NEW  phase-1 results
+  outputs/cell_equidistribution_auc.png      NEW
+  outputs/cell_equidistribution_calibration.png NEW
+  outputs/dimension_sweep_results.json       EDIT (regenerated with d up to 20)
+  research_notes.txt                         NEW  this file
+
+================================================================
+12. RANDOM PROJECTION TEST -- ADDED IN THE FOLLOW-UP SESSION
+================================================================
+User pushback (correct): Weyl (integer frequencies, periodic phi_k =
+exp(2*pi*i*k.u)) is NOT the same thing as a classical "random projection"
+test (real-valued direction v, raw linear value y = v.u, test its full
+distribution). The earlier writeup conflated them. Implemented random
+projections properly this session:
+src/adaptive_dstream/criteria.py: random_projection_score() +
+default_random_directions().
+
+Math: for a fixed unit vector v, Y = v.u has, under H0, E[Y] = 0.5*sum(v)
+and Var(Y) = ||v||^2/12 = 1/12 EXACTLY, independent of v and dim (since
+||v||=1). Y is bounded in a known range R(v) = sum(|v_j|). Applied
+Hoeffding's inequality (1963) directly to the sample mean of Y (mean
+sub-test) and to Z=(Y-0.5*sum(v))^2 in [0,R(v)^2] (variance sub-test, using
+the *known* null mean so Z stays i.i.d.-bounded). m directions x 2
+sub-tests = 2m elementary tests, each run at level alpha/(2m); a union
+bound gives P(any elementary test rejects | H0) <= alpha at EVERY finite n
+-- an exact, non-asymptotic, distribution-free guarantee, unlike Weyl's
+asymptotic chi-square. m defaults to the same count as
+default_weyl_frequencies(dim) for a fair equal-budget comparison.
+
+VALIDATED: empirical FPR was measured at 0.000 (R=400 reps) across dim in
+{2,5,10,20}, n in {100,500,2000} -- i.e. strictly under the nominal bound
+of 0.05, confirming Hoeffding's bound is valid AND, as expected, loose
+(conservative).
+
+THREE-WAY AUC COMPARISON (n=400, R=60, dims 2-20; see
+outputs/cell_equidistribution_auc.png, regenerated):
+
+  - corner_spike:                 moment=weyl=randproj=1.00 (all three trivially catch a blatant point mass)
+  - core_border_imbalance:        moment~0.99, weyl~1.00, randproj 1.00 at d=2 COLLAPSING to 0.50 by d=10+
+  - core_border_imbalance_diag:   moment=weyl=1.00 everywhere, randproj 1.00 at d=2 decaying to ~0.68 at d=20
+  - diagonal_correlated:          weyl=1.00 everywhere; moment AND randproj BOTH at chance (~0.4-0.54) everywhere
+  - symmetric_bimodal:            moment 0.82-1.00 (best here); weyl and randproj both near chance (weyl's
+                                   miss is the known separation=0.25 null-harmonic coincidence, section 6;
+                                   randproj's is structural -- see below)
+
+KEY FINDING: random projection (Hoeffding-bounded, linear, mean+variance
+sub-tests) is essentially POWERLESS (AUC ~0.5) on every shape except the
+crudest one (corner_spike), and its power on the border-imbalance shapes
+COLLAPSES as dimension grows (1.0 at d=2 -> 0.5 by d=10-15). This is not a
+bug, it is the direct, measurable cost of the finite-sample guarantee: for
+a random unit vector in dim d, R(v)=sum|v_j| grows roughly like sqrt(dim)
+(each |v_j| ~ 1/sqrt(dim) on average), and Hoeffding's tail bound has R^2
+in the denominator of its exponent -- so the same true deviation becomes
+exponentially harder to detect at a fixed n as dim grows. This is the
+concrete, quantified version of the power/finite-sample-validity trade-off
+that was only asserted in theory before. It is ALSO blind to
+diagonal_correlated for a structural reason distinct from dimension: a
+LINEAR functional's mean is invariant to any alternative that stays
+symmetric about the box center along the tested direction (which
+diagonal_correlated is, by construction) -- only the variance sub-test
+could catch it, and evidently at n=400 the variance signal along a random
+(not diagonal-aligned) direction is too weak relative to Hoeffding's
+conservative bound to be picked up. Moment (mean/variance aggregated
+per-axis) is ALSO blind to diagonal_correlated, for the different,
+already-documented reason in section 3 (it never looks at cross-axis
+structure at all). So at n=400, ONLY Weyl catches diagonal correlation,
+for the specific reason that its frequency set was deliberately built to
+include cross-axis (sum/difference) frequencies -- a random direction or a
+per-axis moment aggregate both miss it, each for its own distinct reason.
+
+CONCLUSION FOR THE PAPER: three criteria, three different power profiles,
+none dominates:
+  - moment: cheapest (already O(1) streaming, no design choices), good on
+    symmetric shape changes, blind to cross-axis correlation.
+  - Weyl: needs a deliberately chosen frequency set (axis + cross-axis),
+    asymptotically exact calibration, best overall power here, has
+    "blind harmonic" gaps at specific parameter values (a real, citable
+    property of Fourier/Neyman-smooth GOF tests, not a flaw of this
+    implementation).
+  - random projection: the only one with an exact finite-sample (not just
+    asymptotic) false-positive guarantee, but empirically the weakest
+    criterion at the sample sizes used here, and its power degrades
+    further, in a precisely quantifiable way, as dimension grows -- this
+    is itself worth stating as a dimensionality result, symmetric to
+    section 2's split-rule wall: SOME criteria (a literal 2^d-orthant
+    test, and now also naive random-projection-with-a-generic-bound) get
+    *worse* with dimension for reasons specific to the tool, not just "high
+    dimension is hard" in general.
+
+================================================================
+13. OPEN THREADS / NEXT STEPS
+================================================================
+  - Fix the 2**d split-rule wall (section 2) -- prerequisite for real
+    d~40 clustering, separate from the test statistic. CONFIRMED
+    empirically this session: AdaptiveDStream's leaf count sticks at 1
+    (never splits past the root) at dim 12/15/20, ARI collapses to ~0 --
+    see section 7.
+  - MinHash/Jaccard cross-cell-awareness idea (section 4) for sub-problem
+    3: user pushed back ("not in a way you want to use as a cross cell
+    unless you explain what is in your mind") -- explanation given in
+    conversation, not yet written into this file in detail, and explicitly
+    deferred by the user ("we will back to it later"). NOT IMPLEMENTED.
+    Revisit and write up the clarified proposal here before building it.
+  - Re-run symmetric_bimodal at separation=0.15 and/or add k=2 harmonics
+    to default_weyl_frequencies, to confirm and characterize the blind-spot
+    finding (section 6) -- DONE, confirmed (section 6 update): separation
+    0.15 restores weyl AUC to 1.000. k=2 harmonics not yet added.
+  - Finish and record the decay-sensitivity sweep for threshold calibration
+    (section 8) -- DONE, see section 8's confirmed decay table.
+  - Consider combining moment + Weyl (+ now random projection) scores
+    (e.g. via Fisher's method to combine independent p-values) given their
+    complementary blind spots (section 12), rather than picking one as
+    "the" criterion.
+  - Recompile latex/main.tex once a LaTeX toolchain is available to
+    visually confirm the table fix, and add a theory section for the Weyl
+    and random-projection tests with the results table -- DONE. Installed
+    `tectonic` (brew) and `poppler` (for page rendering/verification) this
+    session. latex/main.tex now has a full subsection 4.4 (Weyl + random-
+    projection theorems, proofs) and a Results subsection 8.6 (three-way
+    criteria comparison table + two figures). Compiled cleanly to
+    latex/main.pdf (22 pages, no errors); every new/changed page (theory:
+    pp.5-6; extended dim-sweep table: p.14; criteria comparison: pp.15-17)
+    was rendered to PNG and visually checked -- no cut-off tables, all
+    figures placed (one figure floated one page later than its source
+    position, normal LaTeX behavior, not an error).
+  - random_projection_score currently draws directions as generic random
+    unit vectors; consider a variant that deliberately includes a few
+    diagonal-aligned directions (or scales m up) to see whether it can be
+    made to catch diagonal_correlated at all, versus this being a
+    structural (mean-only-on-a-linear-functional) limitation regardless of
+    how many random directions are used -- currently unclear which.
