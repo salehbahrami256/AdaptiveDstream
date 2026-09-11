@@ -39,6 +39,10 @@ from adaptive_dstream import (
     run_stream_eval,
 )
 
+from adaptive_dstream.logging_utils import configure_run_logging, get_logger
+
+log = get_logger("examples.run_split_strategy_sweep")
+
 SEED = 7
 # See run_frontier_sweep.py's N_SAMPLES comment: contraction and
 # transitional-cell assignment add per-point cost to every model here.
@@ -49,6 +53,7 @@ OUTPUT_DIR = Path("outputs")
 
 
 def main() -> None:
+    configure_run_logging("run_split_strategy_sweep")
     X, y, phase = make_varying_density_stream(
         n_samples=N_SAMPLES, random_state=SEED,
         dense_std=0.18, sparse_std=1.6, dense_weight=0.5, n_phases=3, drift=True,
@@ -66,7 +71,7 @@ def main() -> None:
         )
         r = run_stream_eval(factory, X, y, phase=phase, name=f"FixedGrid(n={n_cells})")
         results.append({**r.to_dict(), "family": "FixedGridDStream", "n_cells_per_dim": n_cells})
-        print(f"FixedGrid n={n_cells:>3}  ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
+        log.info(f"FixedGrid n={n_cells:>3}  ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
               f"peak_mem={r.peak_memory_bytes/1024:.1f}KB  unassigned={r.fraction_unassigned:.2f}")
 
     for strategy in SPLIT_STRATEGIES:
@@ -77,14 +82,14 @@ def main() -> None:
         )
         r = run_stream_eval(factory, X, y, phase=phase, name=f"AdaptiveDStream({strategy})")
         results.append({**r.to_dict(), "family": "AdaptiveDStream", "split_strategy": strategy})
-        print(f"AdaptiveDStream({strategy:<13}) ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
+        log.info(f"AdaptiveDStream({strategy:<13}) ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
               f"peak_mem={r.peak_memory_bytes/1024:.1f}KB  unassigned={r.fraction_unassigned:.2f}")
 
     for name, adapter in make_river_baselines(seed=SEED).items():
         factory = (lambda a=adapter: a)
         r = run_stream_eval(factory, X, y, phase=phase, name=name)
         results.append({**r.to_dict(), "family": name})
-        print(f"{name:<12}                  ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
+        log.info(f"{name:<12}                  ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
               f"peak_mem={r.peak_memory_bytes/1024:.1f}KB  unassigned={r.fraction_unassigned:.2f}")
 
     OUTPUT_DIR.mkdir(exist_ok=True)
@@ -106,7 +111,7 @@ def main() -> None:
     fig.savefig(OUTPUT_DIR / "split_strategy_ari.png", dpi=150)
     plt.close(fig)
 
-    print(f"\nWrote {OUTPUT_DIR}/split_strategy_results.json and split_strategy_ari.png")
+    log.info(f"\nWrote {OUTPUT_DIR}/split_strategy_results.json and split_strategy_ari.png")
 
 
 if __name__ == "__main__":

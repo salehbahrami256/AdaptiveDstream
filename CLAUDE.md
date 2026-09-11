@@ -51,6 +51,44 @@ cd latex && tectonic main.tex
 Every example script is deterministic (fixed `random_state`/`seed`) and self-contained: read the
 `N_SAMPLES`/`SEED`/output-path constants near its top before running or modifying one.
 
+Every `examples/run_*.py` script also writes a full, timestamped log of what it did to `logs/` — see
+"Logging" below. To follow a run while it's happening (real-data downloads and the larger sweeps can take
+minutes): `python examples/run_real_data_frontier.py & tail -f logs/run_real_data_frontier_*.log` in a
+second terminal, or just watch stdout — the same lines go to both.
+
+## Logging
+
+This is a research codebase where the point of a run is the *trail* it leaves, not just the final numbers
+— what data got fetched (from where, how long it took), which features were kept and why, what the model
+did structurally (splits/merges/prunes, and when), and the final metrics. Every module logs through the
+shared `adaptive_dstream` logger tree (`src/adaptive_dstream/logging_utils.py`); every `examples/run_*.py`
+script calls `configure_run_logging("<script_name>")` as the first line of `main()`, which attaches a
+console handler and a file handler (`logs/<script_name>_<timestamp>.log`, gitignored — logs are per-run
+artifacts, not committed) for the whole process. Get a logger the same way anywhere in `src/`:
+
+```python
+from .logging_utils import get_logger
+log = get_logger("my_module")
+```
+
+Conventions, so new code stays consistent:
+- **INFO** — anything a human re-reading the log later would want without wading through noise: model
+  construction and its hyperparameters, dataset fetch/download start+done (with row counts and timing),
+  subsampling, which features were selected and their scores, stream generation parameters and label
+  counts, save/load of reproducible streams, `run_stream_eval` start/25%/50%/75%/100% progress/final
+  metrics, and `maintenance()`'s per-interval leaf/dense/cluster-count summary.
+- **DEBUG** — individual structural events (`log.debug` in `model.py`'s `_split`/`_merge_children`/
+  `_prune_recursive`) — high-frequency, off by default; pass `level=logging.DEBUG` to
+  `configure_run_logging` to see every split/merge/prune when actually debugging the tree structure.
+- Use `%s`-style lazy formatting (`log.info("...%s...", value)`), not an f-string built regardless of
+  whether the log fires, for anything computed specifically for the log line — cheap for the common case
+  (level not enabled), matches every existing call site.
+- When you add a new code path that fetches external data, does feature/model selection, or changes the
+  model's structure (split/merge/prune/contract), add a log line for it at the appropriate level above —
+  this is the main ask behind this section: **prefer adding a log line over adding a comment** for
+  anything that happens at runtime, since the log is what actually gets inspected after a run, not the
+  source.
+
 ## Architecture
 
 - `src/adaptive_dstream/cell.py` — `GridCell`: sufficient statistics (`s0`/`s1`/`s2`, decayed
@@ -92,6 +130,36 @@ Data flow for any experiment: `examples/run_*.py` → generates/loads a stream (
 saved under `data/` for synthetic streams) → runs every model through `evaluation.run_stream_eval` →
 writes results to `outputs/*.json` and figures to `outputs/*.png` → those numbers/figures are what
 `README.md` and `latex/main.tex` report.
+
+### Control flow of one experiment run, step by step
+
+Using `examples/run_frontier_sweep.py` as the concrete example (every other `run_*.py` follows the same
+shape — generate/load data, build a factory per model, call `run_stream_eval`, collect rows, plot):
+
+1. `configure_run_logging(...)` wires up logging (see "Logging" above), then
+   `synthetic.make_varying_density_stream(...)` generates the stream and `synthetic.save_stream(...)`
+   persists it under `data/` with a manifest (generator name/seed/params) for exact reproducibility.
+2. For each model configuration (a `FixedGridDStream` at each grid resolution, `AdaptiveDStream` at its
+   tuned hyperparameters, each `river` baseline via `RiverClusterAdapter`), the script builds a
+   zero-argument `model_factory` closure and hands it to `evaluation.run_stream_eval`.
+3. `run_stream_eval` starts `tracemalloc`, calls `model_factory()` (construction cost is included in peak
+   memory — this matters for `FixedGridDStream`, which eagerly allocates all of its cells here), then
+   drives the model **prequentially** over every point: `model.predict_point_cluster(x)` first, *then*
+   `model.partial_fit(x, t)` — never the other way around, so accuracy reflects genuinely online
+   performance.
+4. Inside `partial_fit` (`model.py`): the point updates its leaf cell's decayed sufficient statistics
+   (`cell.update`), `_should_split` checks whether that leaf's `refinement_score` now exceeds
+   `split_threshold` (triggering `_split` → one of the `_redistribute_*` strategies), and every
+   `maintenance_interval` points, `maintenance()` runs `_prune_recursive` (drops idle+sparse leaves),
+   `_contract_recursive` (merges a fully-split cell's children back in when none of them still need the
+   resolution), then `_assign_clusters` (connected components over face-adjacent dense cells, then a
+   border pass attaching transitional cells to an adjacent cluster) — this is also where the maintenance
+   summary log line comes from.
+5. Back in `run_stream_eval`, unassigned predictions (`None`) are mapped to the sentinel label `-1`, ARI/
+   NMI/purity/peak-memory/throughput are computed in `EvalResult.__post_init__`, and the result is logged
+   and returned as one row.
+6. Once every model has a row, the script writes `outputs/frontier_results.json` and the two
+   `outputs/frontier_*.png` figures — the artifacts that "Keeping the paper in sync" below is about.
 
 ## Keeping the paper in sync
 

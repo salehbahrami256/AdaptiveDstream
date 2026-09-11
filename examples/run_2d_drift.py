@@ -4,8 +4,13 @@ import numpy as np
 from adaptive_dstream import AdaptiveDStream, make_drifting_stream
 from adaptive_dstream.plotting import plot_state
 
+from adaptive_dstream.logging_utils import configure_run_logging, get_logger
+
+log = get_logger("examples.run_2d_drift")
+
 
 def main():
+    configure_run_logging("run_2d_drift")
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dim", type=int, default=2,
                          help="Space dimension (default: 2 — kept at 2 for the README, since "
@@ -45,8 +50,8 @@ def main():
             )
             plt = __import__("matplotlib.pyplot", fromlist=["close"])
             plt.close(fig)
-            print(f"t={t}: {model.summary()}")
-    print("Final summary:", model.summary())
+            log.info(f"t={t}: {model.summary()}")
+    log.info(f"Final summary: {model.summary()}")
 
 
 if __name__ == "__main__":

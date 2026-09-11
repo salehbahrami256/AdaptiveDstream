@@ -25,6 +25,10 @@ from dataclasses import dataclass, field
 import numpy as np
 from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score
 
+from .logging_utils import get_logger
+
+log = get_logger("evaluation")
+
 UNASSIGNED_LABEL = -1
 
 
@@ -134,10 +138,12 @@ def run_stream_eval(
     y_pred = np.empty(n, dtype=int)
     active_cells_over_time: list[tuple[int, int | None]] = []
 
+    log.info("run_stream_eval start: name=%r n_points=%d dim=%d", name, n, X.shape[1])
     tracemalloc.start()
     tracemalloc.reset_peak()
     t0 = time.perf_counter()
     model = model_factory()
+    progress_every = max(1, n // 4)  # log at ~25/50/75/100% so long real-data runs stay followable
     for i in range(n):
         x = X[i]
         pred = model.predict_point_cluster(x)
@@ -145,11 +151,14 @@ def run_stream_eval(
         model.partial_fit(x, t=i + 1)
         if (i + 1) % snapshot_every == 0 or i == n - 1:
             active_cells_over_time.append((i + 1, _active_cell_count(model)))
+        if (i + 1) % progress_every == 0 or i == n - 1:
+            log.info("run_stream_eval %r progress: %d/%d points (%.0f%%), %.1fs elapsed",
+                      name, i + 1, n, 100 * (i + 1) / n, time.perf_counter() - t0)
     elapsed = time.perf_counter() - t0
     _, peak = tracemalloc.get_traced_memory()
     tracemalloc.stop()
 
-    return EvalResult(
+    result = EvalResult(
         name=name,
         y_true=np.asarray(y_true),
         y_pred=y_pred,
@@ -159,3 +168,8 @@ def run_stream_eval(
         elapsed_seconds=elapsed,
         n_points=n,
     )
+    log.info("run_stream_eval done: name=%r ari=%.3f nmi=%.3f purity=%.3f fraction_unassigned=%.2f "
+             "peak_memory=%.1fKB elapsed=%.1fs throughput=%.0fpts/s",
+             name, result.ari, result.nmi, result.purity, result.fraction_unassigned,
+             peak / 1024, elapsed, result.throughput_pts_per_sec)
+    return result

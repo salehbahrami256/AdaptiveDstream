@@ -34,7 +34,8 @@ def _plot_state_2d(model, recent_points, title, save_path):
     if recent_points is not None and len(recent_points):
         ax.scatter(recent_points[:, 0], recent_points[:, 1], s=8, alpha=0.35)
     for cell in model.leaves():
-        state = cell.state(model.t, model.decay, model.dense_threshold, model.sparse_threshold)
+        state = cell.state(model.t, model.decay, model.dense_threshold, model.sparse_threshold,
+                            model._volume_scale(cell))
         rect = Rectangle(
             (cell.lower[0], cell.lower[1]),
             cell.upper[0] - cell.lower[0],
@@ -62,7 +63,8 @@ def _plot_state_1d(model, recent_points, title, save_path):
     fig, ax = plt.subplots(figsize=(9, 3))
     y_cells, y_points = 0.6, 0.2
     for cell in model.leaves():
-        state = cell.state(model.t, model.decay, model.dense_threshold, model.sparse_threshold)
+        state = cell.state(model.t, model.decay, model.dense_threshold, model.sparse_threshold,
+                            model._volume_scale(cell))
         ax.plot(
             [cell.lower[0], cell.upper[0]], [y_cells, y_cells],
             color="tab:blue",

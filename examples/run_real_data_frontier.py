@@ -34,7 +34,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from adaptive_dstream import AdaptiveDStream, FixedGridDStream, make_river_baselines, run_stream_eval
+from adaptive_dstream.logging_utils import configure_run_logging, get_logger
 from adaptive_dstream.real_data import load
+
+log = get_logger("examples.run_real_data_frontier")
 
 DATASETS = ["kddcup99", "covtype", "sensor"]
 DIM = 6
@@ -68,21 +71,21 @@ def eval_dataset(name: str) -> tuple[list[dict], dict]:
     lower, upper = domain(X)
     common = dict(lower=lower, upper=upper, decay=0.99, maintenance_interval=100, idle_prune_after=400)
     rows: list[dict] = []
-    print(f"\n=== {meta['dataset']}  n={meta['n']} dim={meta['dim']} classes={meta['n_classes']} ===")
-    print(f"    features: {meta['features']}")
+    log.info(f"\n=== {meta['dataset']}  n={meta['n']} dim={meta['dim']} classes={meta['n_classes']} ===")
+    log.info(f"    features: {meta['features']}")
 
     # Fixed-resolution D-Stream frontier
     for ncells in GRID_RESOLUTIONS:
         total = ncells ** DIM
         if total > GRID_CELL_CAP:
-            print(f"  D-Stream n={ncells}: skipped ({total} cells > cap {GRID_CELL_CAP})")
+            log.info(f"  D-Stream n={ncells}: skipped ({total} cells > cap {GRID_CELL_CAP})")
             continue
         factory = lambda nc=ncells: FixedGridDStream(
             n_cells_per_dim=nc, dense_threshold=1.0, sparse_threshold=0.1, **common)
         t0 = time.perf_counter()
         r = run_stream_eval(factory, X, y, name=f"D-Stream(n={ncells})")
         rows.append({**r.to_dict(), "family": "D-Stream", "param": ncells})
-        print(f"  D-Stream n={ncells:>2} ({total:>7} cells)  ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
+        log.info(f"  D-Stream n={ncells:>2} ({total:>7} cells)  ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
               f"mem={r.peak_memory_bytes/1024:.0f}KB  unassigned={r.fraction_unassigned:.2f}  "
               f"[{time.perf_counter()-t0:.0f}s]")
 
@@ -95,7 +98,7 @@ def eval_dataset(name: str) -> tuple[list[dict], dict]:
         r = run_stream_eval(factory, X, y, name=f"AdaptiveDStream(max_cells={maxc})")
         leaves = r.active_cells_over_time[-1][1]
         rows.append({**r.to_dict(), "family": "AdaptiveDStream", "param": maxc, "leaves": leaves})
-        print(f"  AdaptiveDStream max_cells={maxc:>4}  ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
+        log.info(f"  AdaptiveDStream max_cells={maxc:>4}  ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
               f"mem={r.peak_memory_bytes/1024:.0f}KB  leaves={leaves}  "
               f"[{time.perf_counter()-t0:.0f}s]")
 
@@ -106,10 +109,10 @@ def eval_dataset(name: str) -> tuple[list[dict], dict]:
         try:
             r = run_stream_eval(factory, X, y, name=bname)
         except Exception as e:  # noqa: BLE001
-            print(f"  {bname}: FAILED ({e!r})")
+            log.info(f"  {bname}: FAILED ({e!r})")
             continue
         rows.append({**r.to_dict(), "family": bname, "param": None})
-        print(f"  {bname:<10}  ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
+        log.info(f"  {bname:<10}  ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
               f"mem={r.peak_memory_bytes/1024:.0f}KB  [{time.perf_counter()-t0:.0f}s]")
 
     return rows, meta
@@ -128,7 +131,7 @@ def degeneracy_check(name: str) -> list[dict]:
         leaves = r.active_cells_over_time[-1][1]
         out.append({"dataset": meta["dataset"], "dim": d, "ari": r.ari,
                     "leaves": leaves, "peak_memory_bytes": r.peak_memory_bytes})
-        print(f"  {meta['dataset']:<16} d={d:>2}  AdaptiveDStream  ARI={r.ari:.3f}  leaves={leaves}"
+        log.info(f"  {meta['dataset']:<16} d={d:>2}  AdaptiveDStream  ARI={r.ari:.3f}  leaves={leaves}"
               f"{'  (never split past root: 2**d > max_cells)' if leaves == 1 else ''}")
     return out
 
@@ -165,12 +168,16 @@ def plot(all_rows: dict, metric: str, ylabel: str, fname: str) -> None:
 
 
 def main() -> None:
+    log_path = configure_run_logging("run_real_data_frontier")
+    log.info("config: datasets=%s dim=%d n_target=%d seed=%d grid_resolutions=%s adaptive_max_cells=%s",
+              DATASETS, DIM, N_TARGET, SEED, GRID_RESOLUTIONS, ADAPTIVE_MAX_CELLS)
+    log.info("full log for this run: %s", log_path)
     OUTPUT_DIR.mkdir(exist_ok=True)
     all_rows, all_meta = {}, {}
     for name in DATASETS:
         all_rows[name], all_meta[name] = eval_dataset(name)
 
-    print("\n=== degeneracy check (AdaptiveDStream, higher dim) ===")
+    log.info("\n=== degeneracy check (AdaptiveDStream, higher dim) ===")
     degen = []
     for name in DEGENERACY_DATASETS:
         degen.extend(degeneracy_check(name))
@@ -184,7 +191,7 @@ def main() -> None:
 
     plot(all_rows, "ari", "Adjusted Rand Index", "real_frontier_ari.png")
     plot(all_rows, "nmi", "Normalized Mutual Information", "real_frontier_nmi.png")
-    print(f"\nWrote {OUTPUT_DIR}/real_frontier_results.json and real_frontier_{{ari,nmi}}.png")
+    log.info(f"\nWrote {OUTPUT_DIR}/real_frontier_results.json and real_frontier_{{ari,nmi}}.png")
 
 
 if __name__ == "__main__":

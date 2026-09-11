@@ -8,6 +8,10 @@ from typing import Sequence
 
 import numpy as np
 
+from .logging_utils import get_logger
+
+log = get_logger("synthetic")
+
 
 def _orbit_centers(dim: int, n_phases: int, radius: float = 3.0):
     """Place an antipodal pair of per-phase centers orbiting the origin.
@@ -212,7 +216,12 @@ def generate_stream(kind: str, n_samples: int = 3000, random_state: int = 42, **
     """Dispatch to one of the named generators in ``GENERATORS``."""
     if kind not in GENERATORS:
         raise ValueError(f"Unknown stream kind {kind!r}; choose from {sorted(GENERATORS)}")
-    return GENERATORS[kind](n_samples=n_samples, random_state=random_state, **kwargs)
+    log.info("generate_stream(kind=%r, n_samples=%d, random_state=%d, %s)",
+             kind, n_samples, random_state, ", ".join(f"{k}={v!r}" for k, v in kwargs.items()))
+    X, y, phase = GENERATORS[kind](n_samples=n_samples, random_state=random_state, **kwargs)
+    log.info("generate_stream(%r) produced X.shape=%s, %d phase(s), label counts=%s",
+             kind, X.shape, len(np.unique(phase)), dict(zip(*np.unique(y, return_counts=True))))
+    return X, y, phase
 
 
 @dataclass
@@ -259,6 +268,8 @@ def save_stream(out_dir: str | Path, name: str, X: np.ndarray, y: np.ndarray, ph
         created_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     )
     manifest_path.write_text(json.dumps(manifest.to_dict(), indent=2))
+    log.info("save_stream: wrote %s and %s (generator=%r seed=%d n=%d dim=%d)",
+             data_path, manifest_path, generator, seed, manifest.n_samples, manifest.dim)
     return data_path
 
 
@@ -267,10 +278,13 @@ def load_stream(out_dir: str | Path, name: str):
     out_dir = Path(out_dir)
     data = np.load(out_dir / f"{name}.npz")
     manifest = json.loads((out_dir / f"{name}.json").read_text())
+    log.info("load_stream: loaded %s (generator=%r seed=%s n=%s dim=%s)", out_dir / f"{name}.npz",
+             manifest.get("generator"), manifest.get("seed"), manifest.get("n_samples"), manifest.get("dim"))
     return data["X"], data["y"], data["phase"], manifest
 
 
 def regenerate_from_manifest(manifest: dict):
     """Recreate a stream from a manifest dict, verifying reproducibility."""
+    log.info("regenerate_from_manifest: replaying generator=%r seed=%s", manifest["generator"], manifest["seed"])
     return generate_stream(manifest["generator"], n_samples=manifest["n_samples"],
                             random_state=manifest["seed"], **manifest.get("params", {}))

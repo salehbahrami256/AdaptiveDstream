@@ -55,6 +55,10 @@ from adaptive_dstream.synthetic import (
     make_varying_density_stream,
 )
 
+from adaptive_dstream.logging_utils import configure_run_logging, get_logger
+
+log = get_logger("examples.run_regime_sweep")
+
 SEED = 7
 # Reduced from 2000: see run_frontier_sweep.py's N_SAMPLES comment -- with
 # contraction and transitional-cell assignment now active, this is 5
@@ -87,6 +91,7 @@ def build_regimes(seed: int):
 
 
 def main() -> None:
+    configure_run_logging("run_regime_sweep")
     regimes = build_regimes(SEED)
     results = []
 
@@ -100,7 +105,7 @@ def main() -> None:
             maintenance_interval=50, idle_prune_after=400,
         )
 
-        print(f"\n=== regime: {regime_name} (n={N_SAMPLES}) ===")
+        log.info(f"\n=== regime: {regime_name} (n={N_SAMPLES}) ===")
 
         for n_cells in FIXED_GRID_RESOLUTIONS:
             factory = lambda n=n_cells: FixedGridDStream(
@@ -109,7 +114,7 @@ def main() -> None:
             r = run_stream_eval(factory, X, y, phase=phase, name=f"FixedGrid(n={n_cells})")
             results.append({**r.to_dict(), "regime": regime_name, "family": "FixedGridDStream",
                              "n_cells_per_dim": n_cells})
-            print(f"  FixedGrid n={n_cells:>3}  ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
+            log.info(f"  FixedGrid n={n_cells:>3}  ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
                   f"peak_mem={r.peak_memory_bytes/1024:.1f}KB  unassigned={r.fraction_unassigned:.2f}")
 
         # Same AdaptiveDStream hyperparameters in every regime -- see module
@@ -122,14 +127,14 @@ def main() -> None:
         r = run_stream_eval(adaptive_factory, X, y, phase=phase, name="AdaptiveDStream")
         results.append({**r.to_dict(), "regime": regime_name, "family": "AdaptiveDStream",
                          "n_cells_per_dim": None})
-        print(f"  AdaptiveDStream      ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
+        log.info(f"  AdaptiveDStream      ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
               f"peak_mem={r.peak_memory_bytes/1024:.1f}KB  unassigned={r.fraction_unassigned:.2f}")
 
         for name, adapter in make_river_baselines(seed=SEED).items():
             factory = (lambda a=adapter: a)
             r = run_stream_eval(factory, X, y, phase=phase, name=name)
             results.append({**r.to_dict(), "regime": regime_name, "family": name, "n_cells_per_dim": None})
-            print(f"  {name:<12}         ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
+            log.info(f"  {name:<12}         ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
                   f"peak_mem={r.peak_memory_bytes/1024:.1f}KB  unassigned={r.fraction_unassigned:.2f}")
 
     OUTPUT_DIR.mkdir(exist_ok=True)
@@ -163,7 +168,7 @@ def main() -> None:
     fig.savefig(OUTPUT_DIR / "regime_sweep_ari.png", dpi=150)
     plt.close(fig)
 
-    print(f"\nWrote {OUTPUT_DIR}/regime_sweep_results.json and regime_sweep_ari.png")
+    log.info(f"\nWrote {OUTPUT_DIR}/regime_sweep_results.json and regime_sweep_ari.png")
 
 
 if __name__ == "__main__":

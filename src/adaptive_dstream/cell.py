@@ -44,6 +44,10 @@ class GridCell:
     def side_lengths(self) -> np.ndarray:
         return self.upper - self.lower
 
+    @property
+    def volume(self) -> float:
+        return float(np.prod(self.side_lengths))
+
     def contains(self, x: np.ndarray) -> bool:
         return bool(np.all(x >= self.lower) and np.all(x <= self.upper))
 
@@ -88,10 +92,26 @@ class GridCell:
         mean_term = float(np.mean(((self.mean() - self.center) ** 2) / h2))
         return alpha_var * var_term + alpha_mean * mean_term
 
-    def state(self, t: int, decay: float, dense_threshold: float, sparse_threshold: float) -> str:
+    def state(self, t: int, decay: float, dense_threshold: float, sparse_threshold: float,
+              volume_scale: float = 1.0) -> str:
+        """Classify this cell as dense/sparse/transitional.
+
+        ``volume_scale`` (default 1.0, i.e. off) lets the caller compare a
+        *density-normalized* effective count (``s0 * volume_scale``) against
+        the thresholds instead of the raw decayed count ``s0``. See
+        ``AdaptiveDStream.density_normalize`` in model.py for why: splitting
+        fragments a region's mass across ``2**d`` smaller children, so a
+        raw-count threshold that's calibrated for one coarse cell
+        systematically under-classifies the same region once it's been
+        refined into many finer cells — an absolute count is not comparable
+        across cells of different volume, only a density (count per unit
+        volume, or equivalently here, count rescaled to a shared reference
+        volume) is.
+        """
         self.decay_to(t, decay)
-        if self.s0 >= dense_threshold:
+        effective = self.s0 * volume_scale
+        if effective >= dense_threshold:
             return "dense"
-        if self.s0 < sparse_threshold:
+        if effective < sparse_threshold:
             return "sparse"
         return "transitional"

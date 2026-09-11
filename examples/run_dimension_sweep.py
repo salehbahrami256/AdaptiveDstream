@@ -43,6 +43,10 @@ from adaptive_dstream import (
     run_stream_eval,
 )
 
+from adaptive_dstream.logging_utils import configure_run_logging, get_logger
+
+log = get_logger("examples.run_dimension_sweep")
+
 SEED = 7
 # Reduced from 2500: see run_frontier_sweep.py's N_SAMPLES comment. Cost
 # here is worse at high dimension specifically, since a split now costs
@@ -85,6 +89,7 @@ def fixed_resolution_for_budget(dim: int, budget: int) -> int:
 
 
 def main() -> None:
+    configure_run_logging("run_dimension_sweep")
     results = []
     for dim in DIMS:
         gen_params = dict(dense_std=0.18, sparse_std=1.6, dense_weight=0.5, n_phases=3, dim=dim)
@@ -98,7 +103,7 @@ def main() -> None:
         n_cells = fixed_resolution_for_budget(dim, CELL_BUDGET)
         total_cells = n_cells ** dim
         if total_cells > FIXED_GRID_CELL_CAP:
-            print(f"dim={dim:>2}  FixedGrid n={n_cells} ({total_cells} cells) SKIPPED: "
+            log.info(f"dim={dim:>2}  FixedGrid n={n_cells} ({total_cells} cells) SKIPPED: "
                   f"exceeds FIXED_GRID_CELL_CAP={FIXED_GRID_CELL_CAP} (n_cells_per_dim floored at 2, "
                   f"so the 'shared budget' premise no longer holds at this dimension anyway)")
         else:
@@ -107,7 +112,7 @@ def main() -> None:
             r = run_stream_eval(factory, X, y, phase=phase, name="FixedGrid(budget-matched)")
             results.append({**r.to_dict(), "family": "FixedGridDStream", "dim": dim,
                              "n_cells_per_dim": n_cells, "total_cells": total_cells})
-            print(f"dim={dim:>2}  FixedGrid n={n_cells} ({total_cells} cells)  ARI={r.ari:.3f}  "
+            log.info(f"dim={dim:>2}  FixedGrid n={n_cells} ({total_cells} cells)  ARI={r.ari:.3f}  "
                   f"peak_mem={r.peak_memory_bytes/1024:.1f}KB  unassigned={r.fraction_unassigned:.2f}")
 
         adaptive_factory = lambda kw=common: AdaptiveDStream(
@@ -118,7 +123,7 @@ def main() -> None:
         results.append({**r.to_dict(), "family": "AdaptiveDStream", "dim": dim,
                          "n_cells_per_dim": None, "total_cells": n_leaves})
         degenerate = " (never split past the root: 2**dim > max_cells)" if n_leaves == 1 else ""
-        print(f"dim={dim:>2}  AdaptiveDStream               ARI={r.ari:.3f}  "
+        log.info(f"dim={dim:>2}  AdaptiveDStream               ARI={r.ari:.3f}  "
               f"peak_mem={r.peak_memory_bytes/1024:.1f}KB  unassigned={r.fraction_unassigned:.2f}  "
               f"leaves={n_leaves}{degenerate}")
 
@@ -150,7 +155,7 @@ def main() -> None:
         fig.savefig(OUTPUT_DIR / fname, dpi=150)
         plt.close(fig)
 
-    print(f"\nWrote {OUTPUT_DIR}/dimension_sweep_results.json and dimension_sweep_{{memory,ari}}.png")
+    log.info(f"\nWrote {OUTPUT_DIR}/dimension_sweep_results.json and dimension_sweep_{{memory,ari}}.png")
 
 
 if __name__ == "__main__":

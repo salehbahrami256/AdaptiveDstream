@@ -30,6 +30,10 @@ from adaptive_dstream import (
     save_stream,
 )
 
+from adaptive_dstream.logging_utils import configure_run_logging, get_logger
+
+log = get_logger("examples.run_frontier_sweep")
+
 SEED = 7
 # Reduced from 4000: contraction (_contract_recursive) and the transitional-
 # cell border-assignment pass (see README "Method") both add per-point cost
@@ -47,16 +51,17 @@ OUTPUT_DIR = Path("outputs")
 
 
 def main() -> None:
+    configure_run_logging("run_frontier_sweep")
     gen_params = dict(dense_std=0.18, sparse_std=1.6, dense_weight=0.5, n_phases=3)
     X, y, phase = make_varying_density_stream(n_samples=N_SAMPLES, random_state=SEED, **gen_params)
     save_stream(DATA_DIR, "varying_density_seed7", X, y, phase,
                 generator="varying_density", seed=SEED, params=gen_params)
-    print(f"Saved reproducible stream to {DATA_DIR}/varying_density_seed7.{{npz,json}}")
+    log.info(f"Saved reproducible stream to {DATA_DIR}/varying_density_seed7.{{npz,json}}")
 
     margin = 1.0
     lower = X.min(axis=0) - margin
     upper = X.max(axis=0) + margin
-    print(f"Domain: {lower} .. {upper}")
+    log.info(f"Domain: {lower} .. {upper}")
 
     common = dict(
         lower=lower, upper=upper, decay=0.99,
@@ -70,7 +75,7 @@ def main() -> None:
         factory = lambda n=n_cells: FixedGridDStream(n_cells_per_dim=n, **common)
         r = run_stream_eval(factory, X, y, phase=phase, name=f"FixedGrid(n={n_cells})")
         results.append({**r.to_dict(), "family": "FixedGridDStream", "n_cells_per_dim": n_cells})
-        print(f"FixedGrid n={n_cells:>3}  ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
+        log.info(f"FixedGrid n={n_cells:>3}  ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
               f"peak_mem={r.peak_memory_bytes/1024:.1f}KB  unassigned={r.fraction_unassigned:.2f}")
 
     # AdaptiveDStream gets its own dense/sparse thresholds rather than
@@ -94,14 +99,14 @@ def main() -> None:
     )
     r = run_stream_eval(adaptive_factory, X, y, phase=phase, name="AdaptiveDStream")
     results.append({**r.to_dict(), "family": "AdaptiveDStream", "n_cells_per_dim": None})
-    print(f"AdaptiveDStream      ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
+    log.info(f"AdaptiveDStream      ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
           f"peak_mem={r.peak_memory_bytes/1024:.1f}KB  unassigned={r.fraction_unassigned:.2f}")
 
     for name, adapter in make_river_baselines(seed=SEED).items():
         factory = (lambda a=adapter: a)  # river models are cheap; adapter is fresh from make_river_baselines
         r = run_stream_eval(factory, X, y, phase=phase, name=name)
         results.append({**r.to_dict(), "family": name, "n_cells_per_dim": None})
-        print(f"{name:<12}         ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
+        log.info(f"{name:<12}         ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
               f"peak_mem={r.peak_memory_bytes/1024:.1f}KB  unassigned={r.fraction_unassigned:.2f}")
 
     OUTPUT_DIR.mkdir(exist_ok=True)
@@ -139,7 +144,7 @@ def main() -> None:
         fig.savefig(OUTPUT_DIR / f"frontier_{metric}_vs_memory.png", dpi=150)
         plt.close(fig)
 
-    print(f"\nWrote {OUTPUT_DIR}/frontier_results.json and frontier_{{ari,nmi}}_vs_memory.png")
+    log.info(f"\nWrote {OUTPUT_DIR}/frontier_results.json and frontier_{{ari,nmi}}_vs_memory.png")
 
 
 if __name__ == "__main__":

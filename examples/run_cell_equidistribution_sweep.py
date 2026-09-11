@@ -63,6 +63,10 @@ from adaptive_dstream.criteria import (
     random_projection_score,
 )
 
+from adaptive_dstream.logging_utils import configure_run_logging, get_logger
+
+log = get_logger("examples.run_cell_equidistribution_sweep")
+
 OUTPUT_DIR = Path("outputs")
 SEED = 7
 
@@ -101,7 +105,7 @@ STYLE = {
 
 
 def run_auc_sweep() -> dict:
-    print("Phase 1a: discriminative power (ROC-AUC) by shape and dimension")
+    log.info("Phase 1a: discriminative power (ROC-AUC) by shape and dimension")
     results = {shape: {"dims": DIMS, **{f"{c}_auc": [] for c in CRITERIA}} for shape in ALT_SHAPES}
     for dim in DIMS:
         null_scores = np.empty((R_AUC, 3))
@@ -119,12 +123,12 @@ def run_auc_sweep() -> dict:
                 auc = roc_auc_score(labels, scores)
                 results[shape][f"{crit}_auc"].append(auc)
                 line += f"  {crit} AUC={auc:.3f}"
-            print(line)
+            log.info(line)
     return results
 
 
 def run_calibration_sweep() -> dict:
-    print("\nPhase 1b: false-positive-rate calibration under true H0 (dim="
+    log.info("\nPhase 1b: false-positive-rate calibration under true H0 (dim="
           f"{DIM_CALIBRATION}, batch/no-decay)")
     moment_thresh = 0.04  # AdaptiveDStream's production split_threshold default
     w_thresh = weyl_threshold(DIM_CALIBRATION, alpha=ALPHA)
@@ -143,7 +147,7 @@ def run_calibration_sweep() -> dict:
             fpr = hits[c] / R_CALIBRATION
             out[f"{c}_fpr"].append(fpr)
             line += f"  {c} FPR={fpr:.3f}"
-        print(line)
+        log.info(line)
     return out
 
 
@@ -187,6 +191,7 @@ def plot_calibration(cal: dict) -> None:
 
 
 def main() -> None:
+    configure_run_logging("run_cell_equidistribution_sweep")
     OUTPUT_DIR.mkdir(exist_ok=True)
     auc_results = run_auc_sweep()
     calibration = run_calibration_sweep()
@@ -196,7 +201,7 @@ def main() -> None:
 
     plot_auc(auc_results)
     plot_calibration(calibration)
-    print(f"\nWrote {OUTPUT_DIR}/cell_equidistribution_auc.{{json,png}} and "
+    log.info(f"\nWrote {OUTPUT_DIR}/cell_equidistribution_auc.{{json,png}} and "
           f"{OUTPUT_DIR}/cell_equidistribution_calibration.png")
 
 

@@ -7,6 +7,9 @@ import numpy as np
 from scipy.stats import norm
 
 from .cell import GridCell
+from .logging_utils import get_logger
+
+log = get_logger("model")
 
 SPLIT_STRATEGIES = ("equal_uniform", "point_mass", "moment_based")
 
@@ -64,6 +67,7 @@ class AdaptiveDStream:
     split_strategy: str = "equal_uniform"
     merge_threshold: float = 0.01
     merge_min_age: int = 100
+    density_normalize: bool = False
 
     def __post_init__(self) -> None:
         self.lower = np.asarray(self.lower, dtype=float)
@@ -81,10 +85,32 @@ class AdaptiveDStream:
         self.root = GridCell(self.lower, self.upper, level=0, last_update=0)
         self.t = 0
         self.n_seen = 0
+        log.info("constructed %s(dim=%d, dense_threshold=%s, sparse_threshold=%s, "
+                 "split_threshold=%s, max_depth=%s, max_cells=%s, split_strategy=%r, decay=%s, "
+                 "density_normalize=%s)",
+                 type(self).__name__, self.dim, self.dense_threshold, self.sparse_threshold,
+                 self.split_threshold, self.max_depth, self.max_cells, self.split_strategy, self.decay,
+                 self.density_normalize)
 
     @property
     def dim(self) -> int:
         return len(self.lower)
+
+    @property
+    def domain_volume(self) -> float:
+        return float(np.prod(self.upper - self.lower))
+
+    def _volume_scale(self, cell: GridCell) -> float:
+        """See ``density_normalize`` and ``GridCell.state`` for the full
+        rationale. Off (1.0, i.e. compare raw decayed count) by default to
+        keep existing calibrated thresholds' behavior unchanged; when
+        enabled, rescales a cell's count to what it would be at the root's
+        volume, so ``dense_threshold``/``sparse_threshold`` are compared
+        against a density rather than an absolute count that silently means
+        less every time a region gets refined."""
+        if not self.density_normalize:
+            return 1.0
+        return self.domain_volume / max(cell.volume, 1e-300)
 
     def leaves(self) -> list[GridCell]:
         out, stack = [], [self.root]
@@ -151,6 +177,8 @@ class AdaptiveDStream:
 
     def _split(self, cell: GridCell) -> None:
         """Split every dimension; redistribute historical summaries per ``split_strategy``."""
+        log.debug("t=%d split leaf level=%d center=%s strategy=%s",
+                  self.t, cell.level, np.round(cell.center, 3), self.split_strategy)
         mids = 0.5 * (cell.lower + cell.upper)
         entries: list[tuple[np.ndarray, GridCell]] = []
         for bits in itertools.product([0, 1], repeat=self.dim):
@@ -238,9 +266,15 @@ class AdaptiveDStream:
             child.raw_count = int(round(cell.raw_count * frac))
 
     def maintenance(self) -> None:
+        n_leaves_before = len(self.leaves())
         self._prune_recursive(self.root)
         self._contract_recursive(self.root)
         self._assign_clusters()
+        leaves = self.leaves()
+        dense = self.dense_leaves()
+        n_clusters = len({c.cluster_id for c in leaves if c.cluster_id is not None})
+        log.info("t=%d maintenance: leaves %d->%d, dense=%d, clusters=%d",
+                 self.t, n_leaves_before, len(leaves), len(dense), n_clusters)
 
     def _prune_recursive(self, node: GridCell) -> None:
         if node.is_leaf:
@@ -252,8 +286,10 @@ class AdaptiveDStream:
             if child.is_leaf:
                 child.decay_to(self.t, self.decay)
                 inactive = (self.t - child.last_update) >= self.idle_prune_after
-                sparse = child.s0 < self.sparse_threshold
+                sparse = child.s0 * self._volume_scale(child) < self.sparse_threshold
                 if inactive and sparse:
+                    log.debug("t=%d prune idle+sparse leaf level=%d center=%s s0=%.4f",
+                              self.t, child.level, np.round(child.center, 3), child.s0)
                     continue
             kept.append(child)
         node.children = kept
@@ -285,6 +321,8 @@ class AdaptiveDStream:
             child.decay_to(self.t, self.decay)
         scores = [child.refinement_score(self.alpha_var, self.alpha_mean) for child in node.children]
         if max(scores, default=0.0) < self.merge_threshold:
+            log.debug("t=%d contract node level=%d center=%s (max child score=%.4f < %.4f)",
+                      self.t, node.level, np.round(node.center, 3), max(scores, default=0.0), self.merge_threshold)
             self._merge_children(node)
 
     def _merge_children(self, node: GridCell) -> None:
@@ -313,7 +351,8 @@ class AdaptiveDStream:
     def dense_leaves(self) -> list[GridCell]:
         return [
             c for c in self.leaves()
-            if c.state(self.t, self.decay, self.dense_threshold, self.sparse_threshold) == "dense"
+            if c.state(self.t, self.decay, self.dense_threshold, self.sparse_threshold,
+                        self._volume_scale(c)) == "dense"
         ]
 
     def _assign_clusters(self) -> None:
@@ -352,7 +391,8 @@ class AdaptiveDStream:
         # same as a sparse cell.
         transitional = [
             c for c in leaves
-            if c.state(self.t, self.decay, self.dense_threshold, self.sparse_threshold) == "transitional"
+            if c.state(self.t, self.decay, self.dense_threshold, self.sparse_threshold,
+                        self._volume_scale(c)) == "transitional"
         ]
         for c in transitional:
             best_neighbor = None

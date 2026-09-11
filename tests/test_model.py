@@ -185,3 +185,33 @@ def test_transitional_cell_with_no_dense_neighbor_stays_unassigned():
 
     model._assign_clusters()
     assert lonely_cell.cluster_id is None
+
+
+def test_density_normalize_off_by_default_is_a_no_op():
+    model = AdaptiveDStream(lower=np.array([-1.0, -1.0]), upper=np.array([1.0, 1.0]))
+    assert model.density_normalize is False
+    child = GridCell(np.array([0.0, 0.0]), np.array([1.0, 1.0]), level=1, last_update=0)
+    assert model._volume_scale(child) == pytest.approx(1.0)
+
+
+def test_density_normalize_scales_effective_count_by_inverse_relative_volume():
+    # Splitting fragments a region's mass across 2**d children, so a cell
+    # covering 1/4 of the domain (half-width per axis, in 2D) should need
+    # only ~1/4 the raw count to read as equally dense once density_normalize
+    # rescales counts to a shared (root) reference volume.
+    model = AdaptiveDStream(
+        lower=np.array([-1.0, -1.0]), upper=np.array([1.0, 1.0]),
+        dense_threshold=1.0, sparse_threshold=0.1, density_normalize=True,
+    )
+    assert model._volume_scale(model.root) == pytest.approx(1.0)  # root == domain volume
+
+    quarter_cell = GridCell(np.array([0.0, 0.0]), np.array([1.0, 1.0]), level=1, last_update=0)
+    scale = model._volume_scale(quarter_cell)
+    assert scale == pytest.approx(4.0)
+
+    quarter_cell.s0 = 0.26  # > dense_threshold / 4, so dense once rescaled...
+    assert quarter_cell.state(model.t, model.decay, model.dense_threshold,
+                               model.sparse_threshold, scale) == "dense"
+    # ...but the identical raw count would not clear the threshold unscaled.
+    assert quarter_cell.state(model.t, model.decay, model.dense_threshold,
+                               model.sparse_threshold, 1.0) == "transitional"

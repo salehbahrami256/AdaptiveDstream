@@ -6,7 +6,10 @@ from dataclasses import dataclass
 import numpy as np
 
 from .cell import GridCell
+from .logging_utils import get_logger
 from .model import AdaptiveDStream
+
+log = get_logger("baselines")
 
 
 @dataclass
@@ -45,6 +48,8 @@ class FixedGridDStream(AdaptiveDStream):
         # containment scan over all n_cells_per_dim ** dim cells.
         self._grid_leaves = children
         self._cell_widths = (self.upper - self.lower) / self.n_cells_per_dim
+        log.info("FixedGridDStream: pre-allocated n_cells_per_dim=%d ^ dim=%d = %d cells",
+                 self.n_cells_per_dim, self.dim, len(children))
 
     def _should_split(self, cell: GridCell) -> bool:
         # A fixed-resolution D-Stream never refines its grid.
@@ -119,6 +124,7 @@ def make_river_baselines(seed: int = 0) -> dict:
     """
     from river import cluster
 
+    log.info("constructing river baselines (DenStream, CluStream, DBSTREAM) with seed=%d", seed)
     return {
         "DenStream": RiverClusterAdapter(
             cluster.DenStream(decaying_factor=0.02, beta=0.5, mu=3, epsilon=0.3, n_samples_init=50),
