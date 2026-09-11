@@ -1,7 +1,46 @@
 ADAPTIVE D-STREAM RESEARCH NOTES
 Running log of the equidistribution-testing discussion with Claude.
 Plain text, meant to be re-pasted into a future chat as context.
-Last updated: 2026-09-09
+Last updated: 2026-09-10
+
+================================================================
+0. HOW THE WORK IS BEING RUN (answer to "whose python engine?")
+================================================================
+Everything runs on YOUR machine, in YOUR repo, in the project's own
+virtualenv: /Users/saleh/AdaptiveDstream/.venv/bin/python3. Claude has no
+separate/hidden compute environment. When Claude "runs" something it issues
+a shell command that executes locally via the Bash tool -- same as if you
+typed it. All numbers in the sweeps, every figure, the JSON files, the
+PDF (via `tectonic`, installed with your `brew`), the KDD/CoverType/Shuttle
+downloads (into ~/scikit_learn_data and ~/.cache) -- produced by your
+interpreter and your installed packages (numpy/scipy/scikit-learn/
+matplotlib/river). What is "Claude" is only the decisions about what code
+to write and what to run; the execution and all artifacts are yours and
+fully reproducible by re-running the same `examples/*.py` scripts.
+Note: on this macOS setup, downloads via scikit-learn need the cert bundle
+pointed at certifi first:
+  export SSL_CERT_FILE=$(python -c "import certifi; print(certifi.where())")
+
+================================================================
+0b. FOLLOW-UP SESSION (2026-09-10) -- WHAT CHANGED
+================================================================
+  - Random-projection criterion added (criteria.py: random_projection_score)
+    -- see section 12.
+  - LaTeX: the routine/textbook material (Hoeffding's inequality statement,
+    the projected-moment and Weyl-moment propositions, their proofs, the
+    union-bound corollary) MOVED OUT of the method section into a new
+    Appendix A ("Derivations for the Weyl and Random-Projection Criteria",
+    \label{app:criteria-proofs}). Section 4.4 now states each criterion's
+    definition and its guarantee in prose with a pointer to the appendix.
+    New \bibitem entries added: Hoeffding1963, Neyman1937Smooth (smooth
+    goodness-of-fit test -- cited for the "blind harmonic" property),
+    CuestaAlbertos2007Projections (random-projection GOF), KDDCup1999,
+    Blackard1999Covtype, Zhu2010StreamData (sensor stream). Compiles clean
+    with tectonic.
+  - Real-data work: adaptive_dstream/real_data.py (loaders for KDD Cup 99,
+    Forest CoverType, and a sensor stream = Statlog Shuttle telemetry) and
+    examples/run_real_data_frontier.py (the memory-accuracy frontier on all
+    three, full baseline set). See section 14.
 
 ================================================================
 1. THE CORE QUESTION THE PAPER IS ORGANIZED AROUND
@@ -536,3 +575,55 @@ none dominates:
     made to catch diagonal_correlated at all, versus this being a
     structural (mean-only-on-a-linear-functional) limitation regardless of
     how many random directions are used -- currently unclear which.
+
+================================================================
+14. REAL-DATA MEMORY-ACCURACY FRONTIER (2026-09-10)
+================================================================
+Files: src/adaptive_dstream/real_data.py (loaders),
+       examples/run_real_data_frontier.py (the experiment).
+
+Datasets (the standard stream-clustering triple):
+  - kddcup99  : KDD Cup 99 10% subset, 3 categorical cols dropped, binary
+                normal-vs-attack label. Top features by MI: src_bytes,
+                dst_bytes, logged_in, count, srv_count, dst_host_count,
+                dst_host_same_src_port_rate, dst_host_srv_diff_host_rate,
+                dst_host_srv_count, dst_host_diff_srv_rate, ... (full ranked
+                list in outputs/real_frontier_results.json meta).
+  - covtype   : Forest CoverType, only the 10 quantitative cartographic
+                features used (44 binary indicator cols dropped), 7-class.
+  - sensor    : Statlog (Shuttle) telemetry via OpenML id=40685, 9 numeric
+                sensor channels, 7-class. (The MOA "sensor.arff" mirror at
+                cse.fau.edu is dead; shuttle is the reliable substitute and
+                is itself a classic sensor-telemetry benchmark.)
+
+Preprocessing (both are deliberate, both are limitations to state):
+  1. SUPERVISED feature selection -- top-`dim` features by mutual
+     information with the label. Needed to make a grid method tractable on
+     40+ raw features at all; every model sees the identical reduced
+     stream so model-vs-model comparison stays fair.
+  2. Robust [1st,99th]-percentile min-max scaling to [0,1]^dim, computed
+     over the whole subsample (not online).
+  Subsample: systematic (every k-th row) to keep coarse temporal/burst
+  structure; n ~ 12k-14k per dataset.
+
+Experiment: peak memory (x, log) vs ARI (y) -- a CURVE not a table --
+per dataset, with the fixed-resolution D-Stream swept over grid
+resolutions {2,3,4,6,8} (its frontier), AdaptiveDStream swept over
+max_cells {400,1200,4000} (its frontier), and DenStream / DBSTREAM /
+CluStream (river) as single points. Headline dim = 8 (largest where
+AdaptiveDStream can still do at least one full split within a sane
+max_cells). Plus a degeneracy check at dim 15 and 20 confirming
+AdaptiveDStream is stuck at leaves=1 there on real data too.
+
+[RESULTS: run in progress at last save -- fill in from
+outputs/real_frontier_results.json and outputs/real_frontier_{ari,nmi}.png
+once complete. Expected shape, consistent with sections 2 and 7: grid
+methods (both fixed and adaptive) struggle in 8-D on real data; the
+distance/micro-cluster river baselines are expected to sit at higher
+accuracy for less memory. If so, that is an honest, on-thesis result --
+the curse of dimensionality is exactly what the paper is about -- and the
+frontier figure is the right way to show it.]
+
+LaTeX: a Results subsection for this goes after 8.7 (Cross-Regime), before
+8.8 (Summary of Findings). New \bibitem keys already added:
+KDDCup1999, Blackard1999Covtype, Zhu2010StreamData.

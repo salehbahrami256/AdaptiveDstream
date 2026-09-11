@@ -18,6 +18,7 @@ from .criteria import (
     RandomProjectionTestResult,
 )
 from .cell_shapes import sample_shape, SHAPES
+from .real_data import load as load_real_dataset, LOADERS as REAL_DATASETS
 
 __all__ = [
     "AdaptiveDStream",
@@ -41,4 +42,6 @@ __all__ = [
     "RandomProjectionTestResult",
     "sample_shape",
     "SHAPES",
+    "load_real_dataset",
+    "REAL_DATASETS",
 ]

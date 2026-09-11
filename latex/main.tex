@@ -213,68 +213,19 @@ $R(g)$ is a moment-matching statistic: it compares the cell's tracked mean and v
 
 \subsubsection{The Weyl Criterion}
 
-For a nonzero integer vector $k \in \mathbb{Z}^d \setminus \{0\}$, define the character $\varphi_k(u) = \exp(2\pi i\, k \cdot u)$ and its sample mean over the $n$ points currently in $g$,
-\[
-S_k = \frac{1}{n}\sum_{j=1}^{n} \varphi_k(u_j).
-\]
-
-\begin{proposition}[Exact null moments]
-\label{prop:weyl-moments}
-If $u \sim \mathrm{Uniform}([0,1]^d)$ and $k \in \mathbb{Z}^d \setminus\{0\}$, then $\mathbb{E}[\varphi_k(u)] = 0$ and $\mathbb{E}[|\varphi_k(u)|^2] = 1$ exactly. Moreover, for two distinct nonzero integer frequencies $k \neq \pm k'$, every second cross moment between $(\mathrm{Re}\,\varphi_k, \mathrm{Im}\,\varphi_k)$ and $(\mathrm{Re}\,\varphi_{k'}, \mathrm{Im}\,\varphi_{k'})$ is exactly zero.
-\end{proposition}
-\begin{proof}
-The characters $\{e^{2\pi i k \cdot u}\}_{k \in \mathbb{Z}^d}$ are an orthonormal basis of $L^2([0,1]^d)$, so $\int_{[0,1]^d} e^{2\pi i k\cdot u}\,du = \mathbb{1}[k=0]$ for integer $k$. This gives $\mathbb{E}[\varphi_k(u)]=0$ for $k\neq 0$ directly, and $\mathbb{E}[|\varphi_k(u)|^2]=\mathbb{E}[1]=1$ since $\varphi_k$ has unit modulus. For the cross moments, $\mathbb{E}[\varphi_k(u)\overline{\varphi_{k'}(u)}] = \int e^{2\pi i(k-k')\cdot u}\,du = \mathbb{1}[k=k']$ and $\mathbb{E}[\varphi_k(u)\varphi_{k'}(u)] = \int e^{2\pi i(k+k')\cdot u}\,du = \mathbb{1}[k=-k']$; both vanish under $k \neq \pm k'$, and expanding into real/imaginary parts gives all four cross second moments equal to zero.
-\end{proof}
-
-By Proposition~\ref{prop:weyl-moments}, $\mathrm{Var}(\mathrm{Re}\,\varphi_k)=\mathrm{Var}(\mathrm{Im}\,\varphi_k)=\tfrac12$ with zero covariance, exactly, under $H_0$. Fix a frequency set $\mathcal{K} = \{k_1,\ldots,k_m\} \subset \mathbb{Z}^d\setminus\{0\}$ with no two frequencies equal or opposite (we use the $d$ axis unit vectors together with the sum and difference of each consecutive coordinate pair, giving $m = 3d-2$, linear in $d$). Define the Weyl statistic
+For a nonzero integer vector $k \in \mathbb{Z}^d \setminus \{0\}$, define the character $\varphi_k(u) = \exp(2\pi i\, k \cdot u)$ and its sample mean over the $n$ points currently in $g$, $S_k = \frac{1}{n}\sum_{j=1}^{n} \varphi_k(u_j)$. Because the integer characters form an orthonormal basis of $L^2([0,1]^d)$, under $H_0$ each $\varphi_k$ has mean $0$ and unit modulus exactly, so $\mathrm{Var}(\mathrm{Re}\,\varphi_k) = \mathrm{Var}(\mathrm{Im}\,\varphi_k) = \tfrac12$ with zero covariance, and any two distinct frequencies $k \neq \pm k'$ are exactly uncorrelated (Proposition~\ref{prop:weyl-moments}, Appendix~\ref{app:criteria-proofs}). Fix a frequency set $\mathcal{K} = \{k_1,\ldots,k_m\} \subset \mathbb{Z}^d\setminus\{0\}$ with no two frequencies equal or opposite — we use the $d$ axis unit vectors together with the sum and difference of each consecutive coordinate pair, giving $m = 3d-2$, linear in $d$ — and define the Weyl statistic
 \[
 T_{\mathrm{Weyl}}(g) = \sum_{k \in \mathcal{K}} 2n\,|S_k|^2.
 \]
-
-\begin{theorem}[Asymptotic calibration]
-\label{thm:weyl-chisq}
-Under $H_0$, as $n \to \infty$, $T_{\mathrm{Weyl}}(g) \Rightarrow \chi^2_{2m}$.
-\end{theorem}
-\begin{proof}[Proof sketch]
-By Proposition~\ref{prop:weyl-moments}, $\sqrt{n}\,(\mathrm{Re}\,S_k, \mathrm{Im}\,S_k)$ for each $k \in \mathcal{K}$ is a sample mean of i.i.d.\ bounded terms with mean $0$, variance $\tfrac12 I_2$, and zero cross-frequency covariance. The multivariate central limit theorem gives joint convergence to $2m$ independent $\mathcal{N}(0,\tfrac12)$ coordinates; $2n|S_k|^2$ is then the sum of two squared, independent, unit-variance-after-scaling Gaussians, i.e.\ $\chi^2_2$ per frequency, and the sum over $m$ frequencies is $\chi^2_{2m}$.
-\end{proof}
-
-The refinement threshold is therefore not a tuned constant but the $(1-\alpha)$ quantile of $\chi^2_{2m}$ for a chosen significance level $\alpha$: $g$ is refined if $T_{\mathrm{Weyl}}(g) > \chi^2_{2m}(1-\alpha)$. Unlike $R(g)$, which only aggregates per-axis statistics, $\mathcal{K}$'s sum/difference frequencies give $T_{\mathrm{Weyl}}$ sensitivity to cross-axis (e.g.\ diagonal) concentration; Section~\ref{sec:criteria-comparison} measures this directly. The cost is $O(nm) = O(nd)$ per evaluation, versus $O(n\cdot 2^d)$ for a literal $2^d$-orthant $\chi^2$ test.
+By the multivariate central limit theorem, $T_{\mathrm{Weyl}}(g) \Rightarrow \chi^2_{2m}$ under $H_0$ as $n \to \infty$ (Theorem~\ref{thm:weyl-chisq}, Appendix~\ref{app:criteria-proofs}). The refinement threshold is therefore not a tuned constant but the $(1-\alpha)$ quantile of $\chi^2_{2m}$ for a chosen significance level $\alpha$: $g$ is refined if $T_{\mathrm{Weyl}}(g) > \chi^2_{2m}(1-\alpha)$. Unlike $R(g)$, which only aggregates per-axis statistics, $\mathcal{K}$'s sum/difference frequencies give $T_{\mathrm{Weyl}}$ sensitivity to cross-axis (e.g.\ diagonal) concentration; Section~\ref{sec:criteria-comparison} measures this directly. The cost is $O(nm) = O(nd)$ per evaluation, versus $O(n\cdot 2^d)$ for a literal $2^d$-orthant $\chi^2$ test. A finite frequency set has blind directions — alternatives whose departure from uniformity lies entirely in an untested harmonic — which is a known property of Fourier-type goodness-of-fit tests in the tradition of Neyman's smooth test~\cite{Neyman1937Smooth}; Section~\ref{sec:criteria-comparison} exhibits one such case.
 
 \subsubsection{The Random-Projection Criterion}
 
-An alternative to testing specific harmonics of $u$ is to test linear projections of $u$ directly. Fix a unit vector $v \in \mathbb{R}^d$ ($\|v\|_2=1$) and let $Y = v \cdot u$.
-
-\begin{proposition}[Exact projected null moments]
-\label{prop:proj-moments}
-If $u \sim \mathrm{Uniform}([0,1]^d)$, then $\mathbb{E}[Y] = \tfrac12\sum_j v_j$ and $\mathrm{Var}(Y) = \tfrac{1}{12}\|v\|_2^2 = \tfrac{1}{12}$, independent of $v$ and $d$. Moreover $Y \in [a(v), b(v)]$ with range $R(v) = b(v)-a(v) = \sum_j |v_j|$.
-\end{proposition}
-\begin{proof}
-$Y$ is a linear combination of independent $\mathrm{Uniform}[0,1]$ coordinates, so $\mathbb{E}[Y] = \sum_j v_j\,\mathbb{E}[u_j] = \tfrac12\sum_j v_j$ and $\mathrm{Var}(Y) = \sum_j v_j^2\,\mathrm{Var}(u_j) = \tfrac{1}{12}\sum_j v_j^2 = \tfrac{1}{12}\|v\|_2^2$. The extremes of $Y$ are attained at cube vertices, giving $a(v) = \sum_j \min(v_j,0)$, $b(v) = \sum_j \max(v_j,0)$.
-\end{proof}
-
-Unlike the Weyl statistic, $Y$'s distribution has no simple closed form for general $v$ (it is a weighted, generalized Irwin--Hall law), so rather than relying on an asymptotic approximation we use a finite-sample concentration bound.
-
-\begin{theorem}[Hoeffding, 1963]
-\label{thm:hoeffding}
-Let $Y_1,\ldots,Y_n$ be i.i.d.\ with $Y_i \in [a,b]$ and mean $\mu$. For any $t>0$,
+An alternative to testing specific harmonics of $u$ is to test linear projections of $u$ directly, in the spirit of random-projection goodness-of-fit testing~\cite{CuestaAlbertos2007Projections}. Fix a unit vector $v \in \mathbb{R}^d$ ($\|v\|_2=1$) and let $Y = v \cdot u$. Under $H_0$, $Y$ is a sum of independent scaled uniforms, so $\mathbb{E}[Y] = \tfrac12\sum_j v_j$ and $\mathrm{Var}(Y) = \tfrac{1}{12}\|v\|_2^2 = \tfrac{1}{12}$ exactly, independent of $v$ and $d$, and $Y$ is confined to an interval of width $R(v) = \sum_j |v_j|$ (Proposition~\ref{prop:proj-moments}, Appendix~\ref{app:criteria-proofs}). $Y$'s distribution has no simple closed form for general $v$ (it is a weighted, generalized Irwin--Hall law), so rather than an asymptotic approximation we use a finite-sample concentration bound. Fix $m$ random unit directions $v_1,\ldots,v_m$, drawn once and independent of the data. For each $v_i$ we run two elementary tests, both comparing a sample mean of i.i.d.\ bounded variables to its exact null value via Hoeffding's inequality~\cite{Hoeffding1963}: a \emph{mean} sub-test on $Y = v_i \cdot u$ against $\tfrac12\sum_j v_{i,j}$, and a \emph{variance} sub-test on $Z = (Y - \tfrac12\sum_j v_{i,j})^2 \in [0, R(v_i)^2]$ against $\tfrac{1}{12}$. Running each of the resulting $2m$ elementary tests at level $\alpha/(2m)$ and refining $g$ if any one rejects gives, by a union bound,
 \[
-\Pr\big(|\bar{Y}_n - \mu| \geq t\big) \;\leq\; 2\exp\!\left(-\frac{2nt^2}{(b-a)^2}\right).
+\Pr(\text{refine } g \mid H_0) \;\leq\; \alpha \qquad \text{for every finite } n
 \]
-\end{theorem}
-
-Fix $m$ random unit directions $v_1,\ldots,v_m$ (drawn once, independent of the data). For each $v_i$, apply Theorem~\ref{thm:hoeffding} twice: once to $Y=v_i\cdot u$ directly (a \emph{mean} sub-test against $\mu_0(v_i)=\tfrac12\sum_j v_{i,j}$), and once to $Z = (Y-\mu_0(v_i))^2 \in [0,R(v_i)^2]$ (a \emph{variance} sub-test against $\mathbb{E}[Z]=\tfrac{1}{12}$, using the exact null mean so $Z$ remains an i.i.d.\ bounded sequence under $H_0$). This yields $2m$ elementary tail bounds.
-
-\begin{corollary}[Finite-sample false-positive control]
-\label{cor:proj-fpr}
-Running each of the $2m$ elementary tests above at level $\alpha/(2m)$ and rejecting $H_0$ if any one rejects gives
-\[
-\Pr(\text{reject } H_0 \mid H_0) \;\leq\; \alpha
-\]
-for every finite $n$, by the union bound over the $2m$ elementary tail probabilities.
-\end{corollary}
-
-Corollary~\ref{cor:proj-fpr} is a strictly stronger guarantee, in one respect, than Theorem~\ref{thm:weyl-chisq}: it holds at \emph{every} $n$, not only asymptotically. The price is that Hoeffding's inequality uses only boundedness, not the true variance of $Y$ or $Z$, so it is loose; and since a random unit vector in $\mathbb{R}^d$ has $\mathbb{E}[\,|v_j|\,] = \Theta(1/\sqrt{d})$ per coordinate, its range grows as $R(v) = \Theta(\sqrt{d})$, appearing squared in the exponent's denominator. A fixed true deviation therefore becomes exponentially harder to detect, at fixed $n$, as $d$ grows — a concrete, quantifiable cost of the non-asymptotic guarantee, measured directly in Section~\ref{sec:criteria-comparison}. As with the Weyl criterion, $m$ directions cost $O(nm)=O(nd)$ per evaluation when $m$ is chosen $O(d)$, and are drawn once (fixed by a seed derived from $d$) rather than re-sampled per evaluation, so the criterion is deterministic and reproducible.
+(Corollary~\ref{cor:proj-fpr}, Appendix~\ref{app:criteria-proofs}). This is a strictly stronger guarantee, in one respect, than the Weyl criterion's: it holds at every $n$, not only asymptotically. The price is that Hoeffding's inequality uses only boundedness, not the true variance, so it is loose; and since a random unit vector in $\mathbb{R}^d$ has $\mathbb{E}[\,|v_j|\,] = \Theta(1/\sqrt{d})$ per coordinate, its range grows as $R(v) = \Theta(\sqrt{d})$, appearing squared in the bound's exponent. A fixed true deviation therefore becomes exponentially harder to certify, at fixed $n$, as $d$ grows — a concrete cost of the non-asymptotic guarantee, measured in Section~\ref{sec:criteria-comparison}. As with the Weyl criterion, $m$ directions cost $O(nm)=O(nd)$ per evaluation for $m = O(d)$, and are drawn once (fixed by a seed derived from $d$) so the criterion is deterministic and reproducible.
 
 \subsection{Contraction Criterion}
 
@@ -681,6 +632,61 @@ Several extensions can further improve the proposed framework. The first is the 
     \item \textbf{Distributed and GPU implementations:} The grid update and clustering steps can be parallelized for high-throughput data streams.
 \end{itemize}
 
+\appendix
+
+\section{Derivations for the Weyl and Random-Projection Criteria}
+\label{app:criteria-proofs}
+
+This appendix collects the derivations behind the two criteria of Section~\ref{sec:alt-criteria}. All statements are under $H_0$: $u \sim \mathrm{Uniform}([0,1]^d)$, with $u = (x-\ell(g))/h_{\ell(g)}$ the cell-local rescaling.
+
+\subsection{Weyl Criterion}
+
+\begin{proposition}[Exact null moments]
+\label{prop:weyl-moments}
+For $k \in \mathbb{Z}^d \setminus\{0\}$, $\mathbb{E}[\varphi_k(u)] = 0$ and $\mathbb{E}[|\varphi_k(u)|^2] = 1$ exactly. For two distinct nonzero integer frequencies $k \neq \pm k'$, every second cross moment between $(\mathrm{Re}\,\varphi_k, \mathrm{Im}\,\varphi_k)$ and $(\mathrm{Re}\,\varphi_{k'}, \mathrm{Im}\,\varphi_{k'})$ is exactly zero.
+\end{proposition}
+\begin{proof}
+The characters $\{e^{2\pi i k \cdot u}\}_{k \in \mathbb{Z}^d}$ are an orthonormal basis of $L^2([0,1]^d)$, so $\int_{[0,1]^d} e^{2\pi i k\cdot u}\,du = \mathbb{1}[k=0]$ for integer $k$. This gives $\mathbb{E}[\varphi_k(u)]=0$ for $k\neq 0$ directly, and $\mathbb{E}[|\varphi_k(u)|^2]=\mathbb{E}[1]=1$ since $\varphi_k$ has unit modulus. For the cross moments, $\mathbb{E}[\varphi_k(u)\overline{\varphi_{k'}(u)}] = \int e^{2\pi i(k-k')\cdot u}\,du = \mathbb{1}[k=k']$ and $\mathbb{E}[\varphi_k(u)\varphi_{k'}(u)] = \int e^{2\pi i(k+k')\cdot u}\,du = \mathbb{1}[k=-k']$; both vanish under $k \neq \pm k'$, and expanding into real and imaginary parts gives all four cross second moments equal to zero.
+\end{proof}
+
+Proposition~\ref{prop:weyl-moments} gives $\mathrm{Var}(\mathrm{Re}\,\varphi_k)=\mathrm{Var}(\mathrm{Im}\,\varphi_k)=\tfrac12$ with zero covariance, exactly, and zero cross-frequency covariance for the frequency set $\mathcal{K}$ (which is chosen with no two frequencies equal or opposite).
+
+\begin{theorem}[Asymptotic calibration]
+\label{thm:weyl-chisq}
+Under $H_0$, as $n \to \infty$, $T_{\mathrm{Weyl}}(g) = \sum_{k \in \mathcal{K}} 2n\,|S_k|^2 \Rightarrow \chi^2_{2m}$, where $m = |\mathcal{K}|$.
+\end{theorem}
+\begin{proof}
+For each $k \in \mathcal{K}$, $\sqrt{n}\,(\mathrm{Re}\,S_k, \mathrm{Im}\,S_k)$ is a normalized sample mean of i.i.d.\ bounded terms with mean $0$, covariance $\tfrac12 I_2$, and, by Proposition~\ref{prop:weyl-moments}, zero cross-frequency covariance. The multivariate central limit theorem gives joint convergence of the stacked vector over all $k \in \mathcal{K}$ to $2m$ independent $\mathcal{N}(0,\tfrac12)$ coordinates. Then $2n|S_k|^2 = (\sqrt{2n}\,\mathrm{Re}\,S_k)^2 + (\sqrt{2n}\,\mathrm{Im}\,S_k)^2$ converges to a sum of two independent squared standard normals, i.e.\ $\chi^2_2$; summing the $m$ independent limits gives $\chi^2_{2m}$.
+\end{proof}
+
+\subsection{Random-Projection Criterion}
+
+\begin{proposition}[Exact projected null moments]
+\label{prop:proj-moments}
+For a fixed unit vector $v$, $Y = v\cdot u$ has $\mathbb{E}[Y] = \tfrac12\sum_j v_j$ and $\mathrm{Var}(Y) = \tfrac{1}{12}\|v\|_2^2 = \tfrac{1}{12}$, independent of $v$ and $d$. Moreover $Y \in [a(v), b(v)]$ with $a(v) = \sum_j \min(v_j,0)$, $b(v) = \sum_j \max(v_j,0)$, and range $R(v) = b(v)-a(v) = \sum_j |v_j|$.
+\end{proposition}
+\begin{proof}
+$Y = \sum_j v_j u_j$ with the $u_j$ i.i.d.\ $\mathrm{Uniform}[0,1]$, so $\mathbb{E}[Y] = \sum_j v_j\,\mathbb{E}[u_j] = \tfrac12\sum_j v_j$ and $\mathrm{Var}(Y) = \sum_j v_j^2\,\mathrm{Var}(u_j) = \tfrac{1}{12}\sum_j v_j^2 = \tfrac{1}{12}\|v\|_2^2$. Each $u_j \in [0,1]$, so $Y$ is maximized (minimized) by setting $u_j = 1$ where $v_j>0$ and $u_j = 0$ where $v_j<0$ (and vice versa), giving the stated $a(v), b(v)$ and $R(v) = \sum_j|v_j|$.
+\end{proof}
+
+\begin{theorem}[Hoeffding, 1963~\cite{Hoeffding1963}]
+\label{thm:hoeffding}
+Let $Y_1,\ldots,Y_n$ be i.i.d.\ with $Y_i \in [a,b]$ and mean $\mu$. For any $t>0$,
+\[
+\Pr\big(|\bar{Y}_n - \mu| \geq t\big) \;\leq\; 2\exp\!\left(-\frac{2nt^2}{(b-a)^2}\right).
+\]
+\end{theorem}
+
+For each of the $m$ random unit directions $v_i$, define the mean sub-test statistic on $Y = v_i\cdot u$ and the variance sub-test statistic on $Z = (Y - \tfrac12\sum_j v_{i,j})^2$. By Proposition~\ref{prop:proj-moments}, $Y \in [a(v_i), b(v_i)]$ with $\mathbb{E}[Y] = \tfrac12\sum_j v_{i,j}$, and $Z \in [0, R(v_i)^2]$ with $\mathbb{E}[Z] = \mathrm{Var}(Y) = \tfrac{1}{12}$ (the sub-test centers $Z$ at the exact null mean, not the sample mean, so $Z_1,\ldots,Z_n$ remain i.i.d.\ under $H_0$ and Theorem~\ref{thm:hoeffding} applies directly to $\bar Z_n$).
+
+\begin{corollary}[Finite-sample false-positive control]
+\label{cor:proj-fpr}
+Run each of the $2m$ elementary tests (a mean and a variance sub-test per direction) at level $\alpha/(2m)$, i.e.\ reject its null when the corresponding Hoeffding tail bound at the observed deviation falls below $\alpha/(2m)$, and refine $g$ if any elementary test rejects. Then $\Pr(\text{refine } g \mid H_0) \leq \alpha$ for every finite $n$.
+\end{corollary}
+\begin{proof}
+By Theorem~\ref{thm:hoeffding} applied to $\bar Y_n$ (mean sub-test) and to $\bar Z_n$ (variance sub-test), each elementary test has probability at most $\alpha/(2m)$ of rejecting under $H_0$, at every $n$. The event ``some elementary test rejects'' is the union of $2m$ such events; the union bound gives total probability at most $2m \cdot \alpha/(2m) = \alpha$.
+\end{proof}
+
 \bibliographystyle{plain}
 \begin{thebibliography}{99}
 
@@ -723,6 +729,37 @@ Fully online clustering of evolving data streams into arbitrarily shaped cluster
 W. Wang, J. Yang, and R. Muntz.
 STING: A statistical information grid approach to spatial data mining.
 In \textit{Proceedings of the International Conference on Very Large Data Bases}, 1997.
+
+\bibitem{Hoeffding1963}
+W. Hoeffding.
+Probability inequalities for sums of bounded random variables.
+\textit{Journal of the American Statistical Association}, 58(301):13--30, 1963.
+
+\bibitem{Neyman1937Smooth}
+J. Neyman.
+``Smooth test'' for goodness of fit.
+\textit{Scandinavian Actuarial Journal}, 1937(3--4):149--199, 1937.
+
+\bibitem{CuestaAlbertos2007Projections}
+J. A. Cuesta-Albertos, R. Fraiman, and T. Ransford.
+A sharp form of the Cram\'er--Wold theorem.
+\textit{Journal of Theoretical Probability}, 20(2):201--209, 2007.
+
+\bibitem{KDDCup1999}
+S. J. Stolfo, W. Fan, W. Lee, A. Prodromidis, and P. K. Chan.
+Cost-based modeling for fraud and intrusion detection: results from the JAM project.
+In \textit{Proceedings of the DARPA Information Survivability Conference and Exposition}, 2000.
+KDD Cup 1999 data.
+
+\bibitem{Blackard1999Covtype}
+J. A. Blackard and D. J. Dean.
+Comparative accuracies of artificial neural networks and discriminant analysis in predicting forest cover types from cartographic variables.
+\textit{Computers and Electronics in Agriculture}, 24(3):131--151, 1999.
+
+\bibitem{Zhu2010StreamData}
+X. Zhu.
+Stream data mining repository, 2010.
+\texttt{http://www.cse.fau.edu/\textasciitilde xqzhu/stream.html}. Sensor stream dataset.
 
 \end{thebibliography}
 
