@@ -615,15 +615,146 @@ AdaptiveDStream can still do at least one full split within a sane
 max_cells). Plus a degeneracy check at dim 15 and 20 confirming
 AdaptiveDStream is stuck at leaves=1 there on real data too.
 
-[RESULTS: run in progress at last save -- fill in from
-outputs/real_frontier_results.json and outputs/real_frontier_{ari,nmi}.png
-once complete. Expected shape, consistent with sections 2 and 7: grid
-methods (both fixed and adaptive) struggle in 8-D on real data; the
-distance/micro-cluster river baselines are expected to sit at higher
-accuracy for less memory. If so, that is an honest, on-thesis result --
-the curse of dimensionality is exactly what the paper is about -- and the
-frontier figure is the right way to show it.]
+RESULTS (run completed 2026-09-11, ~1h44m wall clock, see
+outputs/real_frontier_results.json and outputs/real_frontier_{ari,nmi}.png).
+Note: the headline dim actually run is 6, not the 8 guessed above when this
+section was first drafted -- DIM=6 in run_real_data_frontier.py, chosen so
+AdaptiveDStream can still do more than one split within a sane max_cells
+budget (see the degeneracy check below for what happens once it can't).
 
-LaTeX: a Results subsection for this goes after 8.7 (Cross-Regime), before
-8.8 (Summary of Findings). New \bibitem keys already added:
-KDDCup1999, Blackard1999Covtype, Zhu2010StreamData.
+  kddcup99 (n=8099, 6 features: src_bytes, dst_bytes, logged_in, count,
+  srv_count, dst_host_same_src_port_rate; binary normal-vs-attack):
+    D-Stream n=2/3/4         ARI=-0.069/0.037/0.113   mem=70/668/3708KB
+    AdaptiveDStream mc=300/800/2000/6000
+                              ARI=-0.031/-0.010/0.129/0.132
+                              mem=241/702/1800/5496KB  leaves=253/757/1954/5986
+    DenStream                ARI=0.393   mem=33KB
+    CluStream                ARI=0.328   mem=192KB
+    DBSTREAM                 ARI=0.001   mem=27KB
+
+  covtype (n=8070, 6 features: Elevation, Aspect, Slope,
+  HorzDistToRoadways, Hillshade9am, HorzDistToFirePoints; 7-class):
+    D-Stream n=2/3/4         ARI=-0.005/0.026/-0.003  mem=71/669/3708KB
+    AdaptiveDStream mc=300/800/2000/6000
+                              ARI=0.011/-0.002/-0.016/0.004
+                              mem=245/709/1800/5495KB  leaves=253/757/1954/5986
+    DenStream                ARI=0.001   mem=24KB
+    CluStream                ARI=0.018   mem=188KB
+    DBSTREAM                 ARI=0.038   mem=50KB
+
+  sensor:shuttle (n=8286, 6 of 9 numeric channels: A1,A3,A5,A7,A8,A9;
+  7-class):
+    D-Stream n=2/3/4         ARI=0.034/0.075/0.041    mem=68/669/3708KB
+    AdaptiveDStream mc=300/800/2000/6000
+                              ARI=0.023/0.006/0.035/0.010
+                              mem=242/702/1800/5495KB  leaves=253/757/1954/5986
+    DenStream                ARI=0.423   mem=28KB
+    CluStream                ARI=-0.003  mem=188KB
+    DBSTREAM                 ARI=0.341   mem=34KB
+
+  degeneracy check (kddcup99, AdaptiveDStream, max_cells=4000):
+    dim=10  ARI=0.056  leaves=3070   (2**10=1024 < 4000: still splits)
+    dim=12  ARI=0.001  leaves=1      (2**12=4096 > 4000: stuck at root)
+    dim=15  ARI=0.001  leaves=1      (stuck at root)
+    dim=20  ARI=0.001  leaves=1      (stuck at root)
+
+CONFIRMED exactly the shape guessed above, and it's a clean, on-thesis
+result, not a wash: at dim=6, BOTH grid methods (fixed AND adaptive) are
+weak and inconsistent across all three real datasets (ARI mostly in
+[-0.03, 0.13], often indistinguishable from the FixedGrid frontier at
+matched memory -- AdaptiveDStream does not obviously beat FixedGrid here
+the way the synthetic dimension sweep's memory story suggested it might).
+The river micro-cluster baselines are the clear winners on two of three
+datasets, at a fraction of the memory: DenStream 0.393 (kddcup99) / 0.423
+(sensor) and DBSTREAM 0.341 (sensor) vs. AdaptiveDStream's best of
+0.132/0.010 on those same two, using 30-190x less memory (24-50KB vs.
+1.8-5.5MB for AdaptiveDStream's better-scoring configs). covtype is the
+exception where nothing works well (best ARI anywhere is 0.038, DBSTREAM) --
+plausibly the 7-class cartographic problem just isn't well suited to
+density-based clustering at all, real or synthetic.
+
+The degeneracy check is the sharpest confirmation of the section-2/7
+2**d-split-rule wall using REAL data, not just synthetic noise dimensions:
+at dim=12 (kddcup99, same max_cells=4000 budget that supports 3070 leaves
+at dim=10), AdaptiveDStream cannot perform a single split -- 2**12=4096
+already exceeds max_cells before any split is attempted, so the entire
+41-feature-reduced-to-12 space is one cell for the whole run, same as
+dim=15 and dim=20. This is the real-data proof that fixing the split rule
+(not just the dense-threshold density-normalization idea, see section 15)
+is a hard prerequisite for this method to reach realistic feature counts
+at all, independent of any accuracy-side improvements attempted.
+
+NOT YET DONE: fold this into README.md's Results and latex/main.tex's
+Results section (planned slot: after 8.7 Cross-Regime, before 8.8 Summary
+of Findings; \bibitem keys KDDCup1999, Blackard1999Covtype,
+Zhu2010StreamData already added) -- deferred pending user direction on
+priority (see conversation), not because the numbers aren't ready.
+
+================================================================
+15. DENSITY-NORMALIZED DENSE/SPARSE THRESHOLD -- TRIED, MADE THINGS
+    WORSE (2026-09-11)
+================================================================
+Implemented the #1 item from "Known limitations"/"Contributing": compare a
+DENSITY (count per unit volume, rescaled to the root's volume so existing
+threshold values stay in the same units) against dense_threshold/
+sparse_threshold, instead of the raw decayed count s0. New
+AdaptiveDStream(density_normalize=True) (default False, so nothing existing
+changes); GridCell.state() takes a volume_scale multiplier
+(domain_volume / cell.volume, = 1.0 unless enabled) applied to s0 before
+the threshold comparison. Wired through dense_leaves(), _prune_recursive's
+sparse check, _assign_clusters' transitional check, and plotting.py's two
+call sites. See cell.py/model.py for the implementation, tests/test_model.py
+for two new unit tests (::test_density_normalize_off_by_default_is_a_no_op,
+::test_density_normalize_scales_effective_count_by_inverse_relative_volume).
+
+RESULT: made ARI substantially WORSE on the headline stream, at every
+threshold tried, not better. Probe (scratch, not committed --
+make_varying_density_stream, n=2000, seed=7, same AdaptiveDStream config as
+run_frontier_sweep.py: split_threshold=0.05, max_depth=7, max_cells=3000,
+merge_threshold=0.01/merge_min_age=200):
+
+  baseline (density_normalize=False, dense=0.5/sparse=0.05, current default):
+    ARI=0.066  NMI=0.078  mem=673KB  unassigned=0.21
+  density_normalize=True, dense/sparse swept together (same ratio as
+  baseline, scaled by 1x/2x/4x/8x/16x/32x):
+    dt=0.5  st=0.05   ARI=0.000  unassigned=0.02
+    dt=1.0  st=0.1    ARI=0.001  unassigned=0.02
+    dt=2.0  st=0.2    ARI=0.001  unassigned=0.02
+    dt=4.0  st=0.4    ARI=0.002  unassigned=0.03
+    dt=8.0  st=0.8    ARI=0.003  unassigned=0.04
+    dt=16.0 st=1.6    ARI=0.006  unassigned=0.05
+
+Every density_normalize configuration landed at ARI ~0 (chance), across two
+orders of magnitude of threshold -- not a tuning problem, a mechanism
+problem. Diagnosis: volume_scale = domain_volume/cell.volume =
+2**(dim * level) for an axis-aligned cell split evenly to `level` (2D here,
+so 2**(2*level)). At max_depth=7 that is up to 2**14 = 16384x. A threshold
+multiplier that grows this fast with depth means almost ANY cell that has
+split a few levels deep reads as "dense" the instant it holds even a
+trace amount of decayed mass, regardless of whether that mass reflects
+real local density or noise -- consistent with what's actually observed:
+fraction_unassigned collapsed from 0.21 (baseline) to 0.02-0.05 (far MORE
+points landing in a "cluster", not fewer), which is exactly the
+over-aggressive-dense-classification failure mode, not the intended
+"correctly recognize refined regions as still dense" fix. The normalization
+is directionally motivated (fixes the real problem that raw count means
+less every split) but the specific exponential-in-level scaling is too
+aggressive uncalibrated/undamped -- it overshoots by orders of magnitude
+well before max_depth is reached.
+
+NOT ADOPTED. density_normalize stays implemented and available
+(default off) for future iteration, but this session's straightforward
+version is a negative result, not a fix -- do not cite this as an
+improvement in the paper. Candidates for a next attempt, not yet tried:
+  - a damped scale, e.g. sqrt(volume_scale) or log-scaled, rather than the
+    full linear volume ratio;
+  - cap volume_scale at some max multiplier (e.g. only normalize for the
+    first few split levels, not all the way to max_depth);
+  - normalize sparse_threshold and dense_threshold independently rather
+    than by the same ratio (their optimal calibration may differ once
+    density-normalized, since sparse's job -- gating pruning -- may not
+    need the same aggressiveness as dense's job -- gating clustering);
+  - re-tune split_threshold/merge_threshold alongside density_normalize
+    rather than holding them at their raw-count-tuned values, since the
+    interaction between "when to split" and "what counts as dense
+    post-split" is exactly the coupling this fix targets.

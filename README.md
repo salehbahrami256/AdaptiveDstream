@@ -247,16 +247,57 @@ Full numbers in `outputs/dimension_sweep_results.json`.
 
 Reproduce with `python examples/run_dimension_sweep.py`.
 
+## Real-Data Memory-Accuracy Frontier
+
+*(dim=6, three real streaming-clustering benchmarks — a step beyond [Higher dimensions](#higher-dimensions)' synthetic-noise dimensions: every feature here is real, correlated, real-world structure, not isotropic noise.)*
+
+`examples/run_real_data_frontier.py` runs the same accuracy-vs-memory frontier comparison as the headline synthetic result, on the standard triple in the stream-clustering literature: **KDD Cup 99** (network intrusion, binary normal-vs-attack), **Forest CoverType** (cartographic, 7-class), and **Statlog Shuttle** ("sensor" telemetry, 7-class). Each dataset is reduced to its top-6 features by mutual information with the label (a supervised, and therefore not fully realistic, feature-selection step — see [`real_data.py`](src/adaptive_dstream/real_data.py) for the full rationale and caveats) and robust-scaled into `[0,1]^6`; every model sees the identical reduced stream, systematically subsampled to ~8,000-8,300 points per dataset (keeps coarse temporal/burst structure rather than a homogeneous head slice).
+
+![ARI vs peak memory, three real datasets](outputs/real_frontier_ari.png)
+![NMI vs peak memory, three real datasets](outputs/real_frontier_nmi.png)
+
+| Dataset | Model | Peak memory | ARI |
+|---|---|---:|---:|
+| kddcup99 | FixedGrid n=4 | 3708 KB | 0.113 |
+| kddcup99 | **AdaptiveDStream** (max_cells=6000) | **5496 KB** | **0.132** |
+| kddcup99 | DenStream | 33 KB | **0.393** |
+| kddcup99 | CluStream | 192 KB | 0.328 |
+| covtype | FixedGrid n=3 | 669 KB | 0.026 |
+| covtype | **AdaptiveDStream** (max_cells=6000) | **5495 KB** | **0.004** |
+| covtype | DBSTREAM | 50 KB | 0.038 |
+| sensor:shuttle | FixedGrid n=3 | 669 KB | 0.075 |
+| sensor:shuttle | **AdaptiveDStream** (max_cells=2000) | **1800 KB** | **0.035** |
+| sensor:shuttle | DenStream | 28 KB | **0.423** |
+
+(Best-of-family rows shown for readability; the full sweep — all four fixed-grid resolutions, all four `AdaptiveDStream` memory budgets, every river baseline, per dataset — is in `outputs/real_frontier_results.json`.)
+
+**On real data, neither grid method is competitive with the river micro-cluster baselines — and `AdaptiveDStream` does not obviously beat the fixed grid the way its memory advantage on synthetic noise dimensions ([Higher dimensions](#higher-dimensions)) suggested it might.** Across all three datasets, both `FixedGridDStream` and `AdaptiveDStream` score in a similar, weak, inconsistent range (ARI roughly -0.03 to 0.13), while DenStream and DBSTREAM clear 0.34-0.42 ARI on two of the three datasets (kddcup99, sensor) using 30-190× less memory than `AdaptiveDStream`'s better-scoring configurations. covtype is the exception where nothing scores well (best ARI anywhere is DBSTREAM's 0.038) — plausibly the 7-class cartographic problem isn't well suited to density-based clustering at all, real or synthetic, rather than a method-specific failure.
+
+### Degeneracy at realistic feature counts
+
+The same `AdaptiveDStream` degenerates exactly as [Higher dimensions](#higher-dimensions) predicted, now confirmed on real (not synthetic-noise) features — kddcup99, `max_cells=4000`:
+
+| dim | leaves | ARI |
+|---:|---:|---:|
+| 10 | 3,070 | 0.056 |
+| 12 | 1 | 0.001 |
+| 15 | 1 | 0.001 |
+| 20 | 1 | 0.001 |
+
+At `dim=10`, `2**10=1024 < 4000` and the model still splits normally. At `dim=12`, `2**12=4096 > 4000`, so the very first split is already refused by `_should_split`'s admission check (`projected leaf count > max_cells`) — the whole feature space (12 of kddcup99's 38 numeric columns) stays one cell for the entire run, and stays that way at 15 and 20. This is the `2**d`-split-rule wall from [Known limitations](#known-limitations), demonstrated on a real feature space rather than synthetic isotropic-noise dimensions: a per-axis (not full-orthant) split rule is a hard prerequisite for this method to reach realistic feature counts at all, independent of any accuracy-side fix.
+
+Reproduce with `SSL_CERT_FILE=$(python -c 'import certifi;print(certifi.where())') python examples/run_real_data_frontier.py` — the first run downloads all three datasets (a few hundred MB combined) and caches them locally; the full sweep took roughly 1h45m single-threaded in this session, since `AdaptiveDStream`'s larger memory-budget configurations build trees with thousands of leaves and the `O(dense-cells²)` clustering-adjacency check (see [Known limitations](#known-limitations)) dominates once trees get that large. Every run now logs its progress (dataset fetch, feature selection, per-model progress/results) to `logs/` — see `CLAUDE.md`'s "Logging" section.
+
 ## Known limitations
 
-- **Dense-threshold is an absolute decayed count, not normalized by cell volume.** This is the most consequential current limitation. Splitting a cell fragments its mass across `2**d` smaller children; a region can be genuinely dense (high mass *per unit volume*) while every individual fine cell covering it holds too little raw count to cross `dense_threshold`, because that same mass is now divided among many more cells. A threshold tuned for a coarse fixed grid can therefore make `AdaptiveDStream` systematically under-classify dense regions once it refines them — the more successfully it adapts, the more it can undercut its own dense-cell threshold. The original D-Stream formulation compares *density* (count / cell volume) against a threshold; moving to that here (or otherwise scaling `dense_threshold`/`sparse_threshold` with cell volume) is the top item for week 2.
+- **Dense-threshold is an absolute decayed count, not normalized by cell volume — and the obvious fix for this was tried and made things worse, not better.** Splitting a cell fragments its mass across `2**d` smaller children; a region can be genuinely dense (high mass *per unit volume*) while every individual fine cell covering it holds too little raw count to cross `dense_threshold`, because that same mass is now divided among many more cells. `AdaptiveDStream(density_normalize=True)` (default `False`) implements the direct fix — compare `s0 * (domain_volume / cell.volume)` against the thresholds instead of raw `s0` — but a probe across a 32× threshold range found it drops ARI to ~0 (chance) at every setting on the headline stream, because the scale factor grows as `2**(dim*level)` and overshoots by orders of magnitude well before `max_depth`, flooding the tree with spurious "dense" cells. See `research_notes.txt` for the full diagnosis and untried follow-ups (damped/capped scaling). **Not adopted; `density_normalize` stays off by default.**
 - **A split cell's own `GridCell` object is only freed if it later contracts, and this is now measured, not just estimated.** `_split` gives `cell` children but keeps `cell` itself alive in the tree, still holding its own (now-stale) `s0`/`s1`/`s2` arrays; `_contract_recursive` (see [Method](#method)) reclaims this by aggregating the children back into the parent when it merges — but only for cells that actually satisfy the merge criterion. A direct instrumented comparison on the frontier-sweep stream/config: without contraction, 754 leaves / 1005 total live `GridCell` objects (251 retired parents, ~25% dead weight); with contraction, 637 leaves / 849 total objects (212 retired parents, still ~25%) — contraction reduces total live cells by ~15% but does not eliminate the underlying issue for cells whose children keep legitimately deviating from the uniform assumption (i.e. real, persistent structure), which never satisfy the merge criterion.
 - **All three split-mass-redistribution strategies (`split_strategy="equal_uniform"|"point_mass"|"moment_based"`, see [Method](#method)) are now benchmarked against each other** — see [Split-strategy comparison](#split-strategy-comparison). None gets `AdaptiveDStream` close to the fixed-grid or river baselines; the choice among them is a second-order effect next to the dense-threshold issue above.
 - Dense-cell adjacency for clustering is `O(m²)` in the number of dense cells; the transitional-cell border-assignment pass (see [Method](#method)) adds an `O(transitional × dense)` scan on top of that. **This is now the practical bottleneck for re-running the sweeps at their original sample sizes** — `predict_point_cluster` recomputes cluster assignment from scratch on every point (not just every maintenance interval), and `run_stream_eval`'s `tracemalloc` instrumentation multiplies that cost further (~6× observed during recalibration). The frontier/regime/split-strategy/dimension sweeps above all had their `n_samples` reduced from their original values for this reason — see each script's `N_SAMPLES` comment. Caching `_assign_clusters()`'s result between structural changes (splits/merges/prunes) instead of recomputing it on every prediction is the natural fix, not yet implemented.
 - Splitting always refines every dimension at once (`2**d` children), never a single dimension.
 - Contraction merges a fully-split cell's children back only when *all* of them are simultaneously low-score leaves (see [Method](#method)); a partially-refined subtree (only some grandchildren pruned back to leaves) is never contracted at an intermediate level.
 - No ANN/LSH indexing; `FixedGridDStream._find_leaf` is `O(1)` arithmetic indexing, but `AdaptiveDStream._find_leaf` walks the tree, and each non-leaf step scans all `2**dim` children — expensive once `dim` is large and any splits have happened.
-- **2D is still the focus, though no longer the only dimension exercised.** All the headline numbers above are 2D. [Higher dimensions](#higher-dimensions) is a first, preliminary look at `dim > 2` (the stream generators, evaluation harness, and `plot_state` are now dimension-generic — see below) but uses one seed, untuned thresholds, and noise-only extra dimensions; it is not a substitute for real multi-dimensional evaluation.
+- **2D is still the focus, though no longer the only dimension exercised.** All the headline numbers above are 2D. [Higher dimensions](#higher-dimensions) is a first, preliminary look at `dim > 2` (the stream generators, evaluation harness, and `plot_state` are now dimension-generic — see below) but uses one seed, untuned thresholds, and noise-only extra dimensions; it is not a substitute for real multi-dimensional evaluation. [Real-Data Memory-Accuracy Frontier](#real-data-memory-accuracy-frontier) is that substitute for three real datasets at dim=6, and it confirms the `2**d`-split-rule wall on real (not synthetic-noise) features: `AdaptiveDStream` cannot perform a single split at `dim=12` once `2**dim` alone exceeds `max_cells`, same as the synthetic dimension sweep predicted.
 - `plot_state` only draws the exact grid partition for `dim` 1 or 2. For `dim >= 3`, drawing axis-aligned hyper-rectangles projected onto two axes would be actively misleading (unrelated cells overlap once projected), so it instead scatters points by predicted cluster on two chosen axes, annotated with leaf/dense/cluster counts — informative, but not a substitute for seeing the actual partition.
 
 ## Repository layout
@@ -269,16 +310,20 @@ src/adaptive_dstream/
   synthetic.py     Stream generators + reproducible save/load
   evaluation.py    Prequential eval harness: ARI/NMI/purity/memory/throughput
   plotting.py      Grid-state visualization: exact partition (dim 1-2), cluster-projection scatter (dim >= 3)
+  real_data.py     Loaders for the three real benchmarks (kddcup99/covtype/sensor): fetch, subsample, MI feature selection, scale
+  logging_utils.py Shared logging setup used by every module and example script (see CLAUDE.md's "Logging" section)
 examples/
   run_2d_drift.py        Quickstart visualization on the symmetric two-Gaussian stream (--dim, default 2)
   run_frontier_sweep.py  The evaluation in this README
   run_regime_sweep.py    Same models/hyperparameters across 5 data regimes (see "Results across regimes")
   run_dimension_sweep.py Memory/accuracy vs. dimension (see "Higher dimensions")
+  run_real_data_frontier.py  Same frontier evaluation on three real datasets (see "Real-Data Memory-Accuracy Frontier")
 tests/
 data/          generated streams: {name}.npz (arrays) + {name}.json (seed/params manifest), committed
 outputs/       plots and result JSON land here
+logs/          per-run timestamped logs (gitignored — see CLAUDE.md's "Logging" section)
 ```
 
 ## Contributing / next steps
 
-See [Known limitations](#known-limitations) for the ranked list. The immediate next steps, in order, are (1) density-normalized dense/sparse thresholds and (2) freeing a cell's storage once it has children, then re-running the frontier sweep to see how much of the gap to the fixed-grid frontier those two account for before touching the splitting heuristic itself. Both are especially relevant to [Higher dimensions](#higher-dimensions): density normalization directly addresses the harsher per-split mass fragmentation (`2**dim` children) that's the leading suspect for `AdaptiveDStream`'s accuracy gap growing worse, not better, at low-to-mid dimension before it narrows again at dim 8-10 — re-running the dimension sweep after that fix, with per-dimension threshold tuning and more than one seed, is the natural follow-up.
+See [Known limitations](#known-limitations) for the ranked list. Density-normalized dense/sparse thresholds — previously the top item here — were implemented and tried (`AdaptiveDStream(density_normalize=True)`) and made ARI worse, not better; see that bullet in [Known limitations](#known-limitations) and `research_notes.txt` for the diagnosis. With the real-data run in ([Real-Data Memory-Accuracy Frontier](#real-data-memory-accuracy-frontier)) now confirming the `2**d`-split-rule wall on real features, not just synthetic noise dimensions, that wall — a per-axis rather than full-orthant split rule — is the current top priority: it's the hard prerequisite for reaching realistic feature counts (kddcup99's 38 numeric columns, say) at all, independent of any accuracy-side fix. Freeing a split cell's own storage once it has children remains the other standing item. Both should be re-evaluated against the real-data frontier above, not just the synthetic sweeps, once implemented.
