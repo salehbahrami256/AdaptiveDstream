@@ -5,55 +5,103 @@
 \@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {1.1}Contributions}{2}{subsection.1.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {2}Related Work}{2}{section.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {3}Problem Definition}{3}{section.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Time-Decayed Density}{3}{subsection.3.1}\protected@file@percent }
+\citation{Hassani2014HASTREAM}
+\citation{Hyde2017CEDAS}
+\citation{Erdinc2024MCMSTStream}
+\citation{Rezaei2025FractalDrift}
+\citation{Mansalis2018Evaluation}
+\citation{Ghesmoune2020Review}
+\citation{Tareq2022SystematicReview}
+\citation{Nordahl2025EvaluationSurvey}
+\@writefile{toc}{\contentsline {paragraph}{Multi-resolution and adaptive-grid approaches.}{3}{section*.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Non-convex and arbitrary-shape streaming clusters.}{3}{section*.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Concept drift beyond time-decay.}{3}{section*.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Where grid-based methods stand in recent surveys.}{3}{section*.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Problem Definition}{4}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Time-Decayed Density}{4}{subsection.3.1}\protected@file@percent }
+\newlabel{sec:proposed-method-decay}{{3.1}{4}{Time-Decayed Density}{subsection.3.1}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {4}Proposed Method}{4}{section.4}\protected@file@percent }
 \newlabel{sec:method}{{4}{4}{Proposed Method}{section.4}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Hierarchical Grid Structure}{4}{subsection.4.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Cell Summary}{4}{subsection.4.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Refinement Criterion}{4}{subsection.4.3}\protected@file@percent }
-\newlabel{sec:proposed-method-refinement}{{4.3}{4}{Refinement Criterion}{subsection.4.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Contraction Criterion}{5}{subsection.4.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Sparse Cell Pruning}{5}{subsection.4.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}Clustering over Grid Cells}{5}{subsection.4.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {5}Algorithm}{5}{section.5}\protected@file@percent }
-\@writefile{loa}{\contentsline {algorithm}{\numberline {1}{\ignorespaces Adaptive Multi-Resolution Grid Stream Clustering}}{6}{algorithm.1}\protected@file@percent }
-\newlabel{alg:adaptive-grid}{{1}{6}{Algorithm}{algorithm.1}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {6}Complexity Analysis}{6}{section.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {7}Experimental Evaluation}{6}{section.7}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Datasets}{7}{subsection.7.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Evaluation Metrics}{7}{subsection.7.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {8}Results}{8}{section.8}\protected@file@percent }
-\newlabel{sec:results}{{8}{8}{Results}{section.8}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}Experimental Setup}{8}{subsection.8.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}Accuracy--Memory Frontier in Two Dimensions}{8}{subsection.8.2}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Accuracy--memory frontier on the varying-density stream (2D, $n=2000$, seed 7). AdaptiveDStream is highlighted; it is dominated on ARI by the fixed-grid frontier at comparable memory and by DBSTREAM.}}{9}{table.1}\protected@file@percent }
-\newlabel{tab:frontier}{{1}{9}{Accuracy--memory frontier on the varying-density stream (2D, $n=2000$, seed 7). AdaptiveDStream is highlighted; it is dominated on ARI by the fixed-grid frontier at comparable memory and by DBSTREAM}{table.1}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces ARI (left) and NMI (right) versus peak memory for the fixed-grid frontier, the three imported baselines, and AdaptiveDStream.}}{9}{figure.1}\protected@file@percent }
-\newlabel{fig:frontier}{{1}{9}{ARI (left) and NMI (right) versus peak memory for the fixed-grid frontier, the three imported baselines, and AdaptiveDStream}{figure.1}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.3}Root-Cause Analysis of the Accuracy Gap}{9}{subsection.8.3}\protected@file@percent }
-\newlabel{sec:root-cause}{{8.3}{9}{Root-Cause Analysis of the Accuracy Gap}{subsection.8.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.4}Split-Strategy Comparison}{10}{subsection.8.4}\protected@file@percent }
-\newlabel{sec:split-strategy}{{8.4}{10}{Split-Strategy Comparison}{subsection.8.4}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Split-strategy comparison, varying-density drifting stream ($n=800$, seed 7). Only \texttt  {split\_strategy} differs between the three AdaptiveDStream rows.}}{10}{table.2}\protected@file@percent }
-\newlabel{tab:splitstrategy}{{2}{10}{Split-strategy comparison, varying-density drifting stream ($n=800$, seed 7). Only \texttt {split\_strategy} differs between the three AdaptiveDStream rows}{table.2}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces ARI by model on the split-strategy comparison of Table~\ref {tab:splitstrategy}.}}{11}{figure.2}\protected@file@percent }
-\newlabel{fig:splitstrategy}{{2}{11}{ARI by model on the split-strategy comparison of Table~\ref {tab:splitstrategy}}{figure.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.5}Effect of Dimensionality}{11}{subsection.8.5}\protected@file@percent }
-\newlabel{sec:dim-sweep}{{8.5}{11}{Effect of Dimensionality}{subsection.8.5}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Effect of dimensionality on peak memory and accuracy, at roughly matched memory budgets (varying-density stream, $n=400$, seed 7, single run per dimension).}}{12}{table.3}\protected@file@percent }
-\newlabel{tab:dimsweep}{{3}{12}{Effect of dimensionality on peak memory and accuracy, at roughly matched memory budgets (varying-density stream, $n=400$, seed 7, single run per dimension)}{table.3}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Peak memory (left) and ARI (right) versus dimension, comparing AdaptiveDStream against a fixed grid whose resolution is chosen to match its cell budget at each dimension.}}{12}{figure.3}\protected@file@percent }
-\newlabel{fig:dimsweep}{{3}{12}{Peak memory (left) and ARI (right) versus dimension, comparing AdaptiveDStream against a fixed grid whose resolution is chosen to match its cell budget at each dimension}{figure.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.6}Cross-Regime Generalization}{13}{subsection.8.6}\protected@file@percent }
-\newlabel{sec:regime-sweep}{{8.6}{13}{Cross-Regime Generalization}{subsection.8.6}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Adjusted Rand Index by model and regime ($n=500$, seed 7). Bold marks \texttt  {AdaptiveDStream}, the proposed method.}}{13}{table.4}\protected@file@percent }
-\newlabel{tab:regime-ari}{{4}{13}{Adjusted Rand Index by model and regime ($n=500$, seed 7). Bold marks \texttt {AdaptiveDStream}, the proposed method}{table.4}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Adjusted Rand Index by model across the five regimes in Table~\ref {tab:regime-ari}.}}{13}{figure.4}\protected@file@percent }
-\newlabel{fig:regime-sweep}{{4}{13}{Adjusted Rand Index by model across the five regimes in Table~\ref {tab:regime-ari}}{figure.4}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.7}Summary of Findings}{14}{subsection.8.7}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {9}Discussion}{14}{section.9}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {10}Conclusion}{15}{section.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Hierarchical Grid Structure}{5}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Cell Summary}{5}{subsection.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Refinement Criterion}{5}{subsection.4.3}\protected@file@percent }
+\newlabel{sec:proposed-method-refinement}{{4.3}{5}{Refinement Criterion}{subsection.4.3}{}}
+\citation{Neyman1937Smooth}
+\citation{CuestaAlbertos2007Projections}
+\citation{Hoeffding1963}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Alternative Refinement Criteria: Weyl and Random-Projection Tests}{6}{subsection.4.4}\protected@file@percent }
+\newlabel{sec:alt-criteria}{{4.4}{6}{Alternative Refinement Criteria: Weyl and Random-Projection Tests}{subsection.4.4}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.4.1}The Weyl Criterion}{6}{subsubsection.4.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.4.2}The Random-Projection Criterion}{6}{subsubsection.4.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Contraction Criterion}{7}{subsection.4.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}Sparse Cell Pruning}{7}{subsection.4.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.7}Clustering over Grid Cells}{7}{subsection.4.7}\protected@file@percent }
+\@writefile{loa}{\contentsline {algorithm}{\numberline {1}{\ignorespaces Adaptive Multi-Resolution Grid Stream Clustering}}{8}{algorithm.1}\protected@file@percent }
+\newlabel{alg:adaptive-grid}{{1}{8}{Algorithm}{algorithm.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Algorithm}{8}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}Complexity Analysis}{8}{section.6}\protected@file@percent }
+\citation{KDDCup1999}
+\citation{Blackard1999Covtype}
+\citation{Zhu2010StreamData}
+\@writefile{toc}{\contentsline {section}{\numberline {7}Experimental Evaluation}{9}{section.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Datasets}{9}{subsection.7.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Evaluation Metrics}{9}{subsection.7.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {8}Results}{10}{section.8}\protected@file@percent }
+\newlabel{sec:results}{{8}{10}{Results}{section.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}Experimental Setup}{10}{subsection.8.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}Accuracy--Memory Frontier in Two Dimensions}{11}{subsection.8.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Accuracy--memory frontier on the varying-density stream (2D, $n=2000$, seed 7). AdaptiveDStream is highlighted; it is dominated on ARI by the fixed-grid frontier at comparable memory and by DBSTREAM.}}{11}{table.1}\protected@file@percent }
+\newlabel{tab:frontier}{{1}{11}{Accuracy--memory frontier on the varying-density stream (2D, $n=2000$, seed 7). AdaptiveDStream is highlighted; it is dominated on ARI by the fixed-grid frontier at comparable memory and by DBSTREAM}{table.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces ARI (left) and NMI (right) versus peak memory for the fixed-grid frontier, the three imported baselines, and AdaptiveDStream.}}{11}{figure.1}\protected@file@percent }
+\newlabel{fig:frontier}{{1}{11}{ARI (left) and NMI (right) versus peak memory for the fixed-grid frontier, the three imported baselines, and AdaptiveDStream}{figure.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.3}Root-Cause Analysis of the Accuracy Gap}{12}{subsection.8.3}\protected@file@percent }
+\newlabel{sec:root-cause}{{8.3}{12}{Root-Cause Analysis of the Accuracy Gap}{subsection.8.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.4}Split-Strategy Comparison}{12}{subsection.8.4}\protected@file@percent }
+\newlabel{sec:split-strategy}{{8.4}{12}{Split-Strategy Comparison}{subsection.8.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Split-strategy comparison, varying-density drifting stream ($n=800$, seed 7). Only \texttt  {split\_strategy} differs between the three AdaptiveDStream rows.}}{13}{table.2}\protected@file@percent }
+\newlabel{tab:splitstrategy}{{2}{13}{Split-strategy comparison, varying-density drifting stream ($n=800$, seed 7). Only \texttt {split\_strategy} differs between the three AdaptiveDStream rows}{table.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces ARI by model on the split-strategy comparison of Table~\ref {tab:splitstrategy}.}}{13}{figure.2}\protected@file@percent }
+\newlabel{fig:splitstrategy}{{2}{13}{ARI by model on the split-strategy comparison of Table~\ref {tab:splitstrategy}}{figure.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.5}Effect of Dimensionality}{13}{subsection.8.5}\protected@file@percent }
+\newlabel{sec:dim-sweep}{{8.5}{13}{Effect of Dimensionality}{subsection.8.5}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Effect of dimensionality on peak memory and accuracy, at roughly matched memory budgets (varying-density stream, $n=400$, seed 7, single run per dimension).}}{14}{table.3}\protected@file@percent }
+\newlabel{tab:dimsweep}{{3}{14}{Effect of dimensionality on peak memory and accuracy, at roughly matched memory budgets (varying-density stream, $n=400$, seed 7, single run per dimension)}{table.3}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Peak memory (left) and ARI (right) versus dimension, comparing AdaptiveDStream against a fixed grid whose resolution is chosen to match its cell budget at each dimension.}}{14}{figure.3}\protected@file@percent }
+\newlabel{fig:dimsweep}{{3}{14}{Peak memory (left) and ARI (right) versus dimension, comparing AdaptiveDStream against a fixed grid whose resolution is chosen to match its cell budget at each dimension}{figure.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.6}Single-Cell Equidistribution Criteria Comparison}{15}{subsection.8.6}\protected@file@percent }
+\newlabel{sec:criteria-comparison}{{8.6}{15}{Single-Cell Equidistribution Criteria Comparison}{subsection.8.6}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces ROC-AUC (uniform vs.\ shape), averaged over $d\in \{2,5,10,15,20\}$, $n=400$, $R=60$ repeats per cell. Bold marks the best criterion per shape.}}{16}{table.4}\protected@file@percent }
+\newlabel{tab:criteria-auc}{{4}{16}{ROC-AUC (uniform vs.\ shape), averaged over $d\in \{2,5,10,15,20\}$, $n=400$, $R=60$ repeats per cell. Bold marks the best criterion per shape}{table.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces ROC-AUC by shape and dimension for the three refinement criteria. Random projection's power on the two border-imbalance shapes visibly collapses toward chance as dimension grows, exactly as Theorem~\ref {thm:hoeffding}'s discussion predicts ($R(v)=\Theta (\sqrt  {d})$ weakens the bound); Weyl's power does not.}}{16}{figure.4}\protected@file@percent }
+\newlabel{fig:criteria-auc}{{4}{16}{ROC-AUC by shape and dimension for the three refinement criteria. Random projection's power on the two border-imbalance shapes visibly collapses toward chance as dimension grows, exactly as Theorem~\ref {thm:hoeffding}'s discussion predicts ($R(v)=\Theta (\sqrt {d})$ weakens the bound); Weyl's power does not}{figure.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Empirical false-positive rate under true $H_0$ versus sample size $n$ (batch, no decay), $d=10$. $T_{\mathrm  {Weyl}}$ tracks its nominal $\alpha =0.05$ at every $n$; the random-projection criterion stays at or near $0$, strictly under its $\le \alpha $ bound; $R(g)$'s fixed threshold shows $0$ false positives here but is not calibrated in the same sense (see discussion above).}}{17}{figure.5}\protected@file@percent }
+\newlabel{fig:criteria-calibration}{{5}{17}{Empirical false-positive rate under true $H_0$ versus sample size $n$ (batch, no decay), $d=10$. $T_{\mathrm {Weyl}}$ tracks its nominal $\alpha =0.05$ at every $n$; the random-projection criterion stays at or near $0$, strictly under its $\le \alpha $ bound; $R(g)$'s fixed threshold shows $0$ false positives here but is not calibrated in the same sense (see discussion above)}{figure.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.7}Cross-Regime Generalization}{17}{subsection.8.7}\protected@file@percent }
+\newlabel{sec:regime-sweep}{{8.7}{17}{Cross-Regime Generalization}{subsection.8.7}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Adjusted Rand Index by model and regime ($n=500$, seed 7). Bold marks \texttt  {AdaptiveDStream}, the proposed method.}}{18}{table.5}\protected@file@percent }
+\newlabel{tab:regime-ari}{{5}{18}{Adjusted Rand Index by model and regime ($n=500$, seed 7). Bold marks \texttt {AdaptiveDStream}, the proposed method}{table.5}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Adjusted Rand Index by model across the five regimes in Table~\ref {tab:regime-ari}.}}{18}{figure.6}\protected@file@percent }
+\newlabel{fig:regime-sweep}{{6}{18}{Adjusted Rand Index by model across the five regimes in Table~\ref {tab:regime-ari}}{figure.6}{}}
+\citation{KDDCup1999}
+\citation{Blackard1999Covtype}
+\citation{Zhu2010StreamData}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.8}Real-Data Memory-Accuracy Frontier}{19}{subsection.8.8}\protected@file@percent }
+\newlabel{sec:real-data}{{8.8}{19}{Real-Data Memory-Accuracy Frontier}{subsection.8.8}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Best-of-family Adjusted Rand Index and peak memory, three real datasets, dim$=6$. Full sweep (all resolutions/budgets) in \texttt  {outputs/real\_frontier\_results.json}.}}{19}{table.6}\protected@file@percent }
+\newlabel{tab:real-frontier}{{6}{19}{Best-of-family Adjusted Rand Index and peak memory, three real datasets, dim$=6$. Full sweep (all resolutions/budgets) in \texttt {outputs/real\_frontier\_results.json}}{table.6}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Adjusted Rand Index vs.\ peak memory (log scale), three real datasets. Circles: \texttt  {FixedGridDStream} frontier. Stars: \texttt  {AdaptiveDStream} frontier. Squares: \texttt  {river} baselines.}}{19}{figure.7}\protected@file@percent }
+\newlabel{fig:real-frontier-ari}{{7}{19}{Adjusted Rand Index vs.\ peak memory (log scale), three real datasets. Circles: \texttt {FixedGridDStream} frontier. Stars: \texttt {AdaptiveDStream} frontier. Squares: \texttt {river} baselines}{figure.7}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Normalized Mutual Information vs.\ peak memory (log scale), three real datasets.}}{20}{figure.8}\protected@file@percent }
+\newlabel{fig:real-frontier-nmi}{{8}{20}{Normalized Mutual Information vs.\ peak memory (log scale), three real datasets}{figure.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.9}Summary of Findings}{20}{subsection.8.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {9}Discussion}{21}{section.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {10}Conclusion}{22}{section.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {A}Derivations for the Weyl and Random-Projection Criteria}{23}{appendix.A}\protected@file@percent }
+\newlabel{app:criteria-proofs}{{A}{23}{Derivations for the Weyl and Random-Projection Criteria}{appendix.A}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.1}Weyl Criterion}{23}{subsection.A.1}\protected@file@percent }
+\newlabel{prop:weyl-moments}{{1}{23}{Exact null moments}{proposition.1}{}}
+\newlabel{thm:weyl-chisq}{{1}{23}{Asymptotic calibration}{theorem.1}{}}
+\citation{Hoeffding1963}
 \bibstyle{plain}
 \bibcite{Aggarwal2003CluStream}{1}
 \bibcite{Aggarwal2007DataStreams}{2}
@@ -63,4 +111,21 @@
 \bibcite{Hahsler2016DBSTREAM}{6}
 \bibcite{Hyde2017CEDAS}{7}
 \bibcite{Wang1997STING}{8}
-\gdef \@abspage@last{17}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.2}Random-Projection Criterion}{24}{subsection.A.2}\protected@file@percent }
+\newlabel{prop:proj-moments}{{2}{24}{Exact projected null moments}{proposition.2}{}}
+\newlabel{thm:hoeffding}{{2}{24}{Hoeffding, 1963~\cite {Hoeffding1963}}{theorem.2}{}}
+\newlabel{cor:proj-fpr}{{1}{24}{Finite-sample false-positive control}{corollary.1}{}}
+\bibcite{Hassani2014HASTREAM}{9}
+\bibcite{Mansalis2018Evaluation}{10}
+\bibcite{Ghesmoune2020Review}{11}
+\bibcite{Tareq2022SystematicReview}{12}
+\bibcite{Erdinc2024MCMSTStream}{13}
+\bibcite{Rezaei2025FractalDrift}{14}
+\bibcite{Nordahl2025EvaluationSurvey}{15}
+\bibcite{Hoeffding1963}{16}
+\bibcite{Neyman1937Smooth}{17}
+\bibcite{CuestaAlbertos2007Projections}{18}
+\bibcite{KDDCup1999}{19}
+\bibcite{Blackard1999Covtype}{20}
+\bibcite{Zhu2010StreamData}{21}
+\gdef \@abspage@last{25}

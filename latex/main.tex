@@ -92,6 +92,14 @@ Grid-based methods partition the data space into cells and maintain summaries fo
 
 The main weakness of fixed-grid approaches is that one global cell size cannot represent all regions of a non-uniform or evolving data stream equally well. If the cell size is too large, distinct clusters may be merged. If the cell size is too small, the number of cells may become too large, causing high memory consumption and computational overhead.
 
+\paragraph{Multi-resolution and adaptive-grid approaches.} The idea of letting resolution vary across a stream rather than fixing it once is not new. HASTREAM~\cite{Hassani2014HASTREAM} builds a hierarchical density-based model over micro-clusters and adapts its density threshold independently per region without user intervention, closest in spirit to the present work's goal, though its mechanism is a hierarchy over micro-clusters rather than a split/merge grid, and it does not maintain the explicit per-cell moment statistics this paper's refinement criterion is built on. Earlier adaptive-grid proposals include mesh-refinement-style grids that apply different granularities to regions of different density, and accuracy-guaranteed adaptive-grid $k$-median clustering; both predate the time-decayed density model and the split/merge/prune loop used here, and neither reports the memory-accounting or dense-threshold interactions identified in Section~\ref{sec:root-cause}. To our knowledge, no prior grid-based method couples split/merge decisions directly to a per-cell equidistribution test of the kind studied in Section~\ref{sec:criteria-comparison} below.
+
+\paragraph{Non-convex and arbitrary-shape streaming clusters.} CEDAS~\cite{Hyde2017CEDAS} and, more recently, MCMSTStream~\cite{Erdinc2024MCMSTStream} address arbitrary cluster shape directly, the latter by running a minimum spanning tree over KD-tree-indexed micro-clusters rather than axis-aligned cells. This is a relevant contrast to the present work's own moons-drift result (Section~\ref{sec:regime-sweep}), where axis-aligned rectangular cells and face-adjacency connectivity are shown empirically to be a poor fit for non-convex boundaries at any grid resolution; combining a micro-cluster-style shape mechanism with the memory accounting of a grid is a natural extension, noted in Future Work.
+
+\paragraph{Concept drift beyond time-decay.} This paper follows D-Stream's exponential fading for drift adaptation. An alternative recent direction augments grid-density clustering with explicit drift detectors: Rezaei and Sajedi~\cite{Rezaei2025FractalDrift} combine a grid-density-based clustering model with dual drift-detection mechanisms based on distance metrics and fractal dimension, triggering re-partitioning rather than relying on decay alone. Explicit drift detection of this kind is listed as a future-work direction in this paper as well (see Future Work below), independent of, and potentially complementary to, the density-normalization fix identified as the current bottleneck in Section~\ref{sec:root-cause}.
+
+\paragraph{Where grid-based methods stand in recent surveys.} Broader stream-clustering surveys and evaluations, from Mansalis et al.~\cite{Mansalis2018Evaluation} and Ghesmoune et al.~\cite{Ghesmoune2020Review} through Tareq et al.'s systematic review specifically of density-grid-based methods~\cite{Tareq2022SystematicReview} and the most recent evaluation survey by Nordahl et al.~\cite{Nordahl2025EvaluationSurvey}, consistently report that density-grid-based algorithms trail micro-cluster-based methods (DenStream-, DBSTREAM-, and CluStream-style approaches) on cluster quality for evolving streams, and identify this as an open, recurring issue across the density-grid literature rather than a property of any single implementation. This is consistent with, rather than contradicted by, the empirical ordering found throughout Section~\ref{sec:results} of this paper (imported \texttt{river} baselines outperforming both the fixed-grid frontier and \texttt{AdaptiveDStream} on ARI at a fraction of the memory): it situates the gap identified in Section~\ref{sec:root-cause} as an instance of a wider, already-documented pattern in the density-grid family, not an anomaly specific to this prototype.
+
 Our method is motivated by these limitations. It combines the compact representation of grid-based methods, the time-decayed density mechanism of D-Stream, the statistical summaries of STING-like methods, and the sparse-cell pruning philosophy of stream clustering algorithms such as CEDAS.
 
 \section{Problem Definition}
@@ -783,6 +791,41 @@ Fully online clustering of evolving data streams into arbitrarily shaped cluster
 W. Wang, J. Yang, and R. Muntz.
 STING: A statistical information grid approach to spatial data mining.
 In \textit{Proceedings of the International Conference on Very Large Data Bases}, 1997.
+
+\bibitem{Hassani2014HASTREAM}
+M. Hassani, P. Spaus, and T. Seidl.
+Adaptive multiple-resolution stream clustering.
+In \textit{Machine Learning and Data Mining in Pattern Recognition (MLDM 2014)}, Lecture Notes in Computer Science, vol. 8556, pages 134--148. Springer, 2014.
+
+\bibitem{Mansalis2018Evaluation}
+S. Mansalis, E. Ntoutsi, N. Pelekis, and Y. Theodoridis.
+An evaluation of data stream clustering algorithms.
+\textit{Statistical Analysis and Data Mining: The ASA Data Science Journal}, 11(4):167--187, 2018.
+
+\bibitem{Ghesmoune2020Review}
+M. Ghesmoune, M. Lebbah, and H. Azzag.
+Data stream clustering: a review.
+\textit{Artificial Intelligence Review}, 53(8):6169--6222, 2020.
+
+\bibitem{Tareq2022SystematicReview}
+M. Tareq, E. Sundararajan, A. Harwood, and A. A. Bakar.
+A systematic review of density grid-based clustering for data streams.
+\textit{IEEE Access}, 10:11989--12015, 2022.
+
+\bibitem{Erdinc2024MCMSTStream}
+B. Erdin{\c{c}}, M. Kaya, and A. {\c{S}}enol.
+MCMSTStream: applying minimum spanning tree to KD-tree-based micro-clusters to define arbitrary-shaped clusters in streaming data.
+\textit{Neural Computing and Applications}, 36(13):7025--7042, 2024.
+
+\bibitem{Rezaei2025FractalDrift}
+Z. Rezaei and H. Sajedi.
+Data stream clustering with concept drift using fractal dimension.
+\textit{Knowledge and Information Systems}, 2025.
+
+\bibitem{Nordahl2025EvaluationSurvey}
+C. Nordahl, V. Boeva, H. Grahn, and M. Persson Netz.
+On evaluation of data stream clustering algorithms: a survey.
+\textit{IEEE Access}, 13, 2025.
 
 \bibitem{Hoeffding1963}
 W. Hoeffding.

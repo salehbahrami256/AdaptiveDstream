@@ -1,7 +1,7 @@
 ADAPTIVE D-STREAM RESEARCH NOTES
 Running log of the equidistribution-testing discussion with Claude.
 Plain text, meant to be re-pasted into a future chat as context.
-Last updated: 2026-09-10
+Last updated: 2026-09-15
 
 ================================================================
 0. HOW THE WORK IS BEING RUN (answer to "whose python engine?")
@@ -684,6 +684,12 @@ dim=15 and dim=20. This is the real-data proof that fixing the split rule
 is a hard prerequisite for this method to reach realistic feature counts
 at all, independent of any accuracy-side improvements attempted.
 
+RESOLVED (see section 16): folded into README.md's Results and
+latex/main.tex's Results section by a later session (commit "Write
+real-data frontier results into README and paper") -- the "NOT YET DONE"
+note that was here is stale; not deleting it below per this file's
+append-only convention, just flagging the resolution.
+
 NOT YET DONE: fold this into README.md's Results and latex/main.tex's
 Results section (planned slot: after 8.7 Cross-Regime, before 8.8 Summary
 of Findings; \bibitem keys KDDCup1999, Blackard1999Covtype,
@@ -758,3 +764,134 @@ improvement in the paper. Candidates for a next attempt, not yet tried:
     rather than holding them at their raw-count-tuned values, since the
     interaction between "when to split" and "what counts as dense
     post-split" is exactly the coupling this fix targets.
+
+================================================================
+16. 13-WEEK PLAN AUDIT + RELATED WORK REFRESH THROUGH 2025 (2026-09-15)
+================================================================
+The user's 13-week plan lives in a private Claude artifact (checklist ids
+p1-p29 paper track, a1-a17 applications track), not in this repo. Asked to
+report progress, the audit below checked the artifact's own "done" list
+against actual code/README/outputs rather than trusting the checklist --
+two items were found MARKED DONE THAT AREN'T, in the actual sense the plan
+item describes:
+
+  - p7 ("bounded reservoir per leaf -- 32 points, B*d floats -- rebuild
+    child moments from the buffered points on split"): NOT implemented.
+    model.py's three split strategies (_redistribute_equal_uniform,
+    _redistribute_point_mass, _redistribute_moment_based) are all still
+    purely statistical, working only off the parent's s0/s1/s2 summary --
+    none of them retain or replay actual buffered raw points. The
+    "moment_based" strategy (truncated-Gaussian per axis) is a principled
+    statistical improvement over equal_uniform, but it is not a reservoir
+    and does not close p7. If p7 gets attempted, it needs an actual bounded
+    per-leaf point buffer added to GridCell, sized/evicted, and folded into
+    memory accounting (it would count toward peak_memory_bytes, unlike the
+    current summary-only cells) -- and then p14's ablation (equal vs.
+    moment vs. reservoir) is finally answerable as literally specified.
+
+  - p17 ("handle unknown domains -- warm-up normalization or expanding
+    root, since real streams don't come with bounds"): worked around, not
+    solved. run_real_data_frontier.py's domain(X) computes lower/upper from
+    the *entire loaded dataset* up front, which is fine for a benchmark
+    array (KDD/CoverType/sensor are loaded complete, not genuinely
+    unbounded live streams) but is not what p17 describes -- a truly
+    open-ended stream still can't be handed to AdaptiveDStream today
+    without pre-known bounds; partial_fit still clips to [lower, upper]
+    rather than expanding to accommodate genuinely unseen range. Distinguish
+    "solved the real-data experiments' practical need" (yes) from "solved
+    the general problem p17 names" (no) if this comes up again.
+
+Everything else the checklist marks done (p1-p6, p8-p10, p18-p19, p25) was
+spot-checked and IS actually present: p8 (moment_based strategy), p9
+(_contract_recursive / merge_threshold), p10 (transitional-cell border
+assignment in _assign_clusters) all confirmed in model.py; p18/p19/p20
+(three real datasets, full 5-model-family comparison, memory-accuracy
+frontier) confirmed via README's "Real-Data Memory-Accuracy Frontier"
+section and outputs/real_frontier_*.{json,png} -- this also means section
+14 above's "NOT YET DONE: fold into README/paper" note is STALE, resolved
+by a later session (commit "Write real-data frontier results into README
+and paper"); not rewriting that section per this file's append-only rule,
+just flagging the resolution here (and just above it).
+
+NOT DONE, not claimed done, genuinely open: p11 (correctness pass --
+`GridCell.contains` is still closed on both bounds, not half-open; the
+nearest-centre fallback in `_find_leaf` is still a silent behavior, not an
+assertion); p12 (performance pass -- `leaves()` is still called live inside
+`_should_split` every point, no running leaf counter; clustering still runs
+inside `maintenance()`, not moved to on-demand checkpoints -- see
+CLAUDE.md's architecture section, step 4, which documents this as current,
+accurate behavior, not a residual TODO comment); p14 (ablation is 2/3 done
+-- equal_uniform vs. point_mass vs. moment_based exists in
+run_split_strategy_sweep.py, reservoir is the missing third arm, blocked on
+p7); p15 (alpha_var/alpha_mean ablation, no evidence found in code, tests,
+or outputs/); p16 (merge on/off ablation specifically under drift -- every
+sweep script now has contraction always-on, no on/off comparison exists);
+p21 (a dedicated throughput table/figure -- throughput_pts_per_sec is
+computed and saved in every outputs/*.json, but nothing in README.md or
+latex/main.tex presents it as its own table the way p21 asks); p22-p23,
+p26-p27 (weeks 8-10 paper-rewrite items -- premature, results are still
+being added).
+
+RELATED WORK REFRESH (p24, "your current references stop in 2017"): true
+before this session -- the Related Work section's newest citation was
+Hyde2017CEDAS, everything else 1996-2016. Added four new paragraphs to
+\section{Related Work} in latex/main.tex and 7 new \bibitem entries, found
+via WebSearch and cross-checked for author/venue/year accuracy (not taken
+from search-summary text alone -- each was verified with a second, more
+specific query before citing):
+
+  - Hassani, Spaus, Seidl (2014), "Adaptive Multiple-Resolution Stream
+    Clustering" (HASTREAM), MLDM 2014 / LNCS 8556. Pre-2018 (outside the
+    "since 2017" window) but the single most directly relevant prior work
+    found -- an existing multi-resolution *adaptive* stream clustering
+    method -- so cited regardless and discussed as the closest prior art:
+    hierarchical density model over micro-clusters with independently
+    adapted per-region thresholds, vs. this paper's split/merge grid with
+    explicit per-cell moment statistics. Its absence would be a real gap
+    a reviewer would flag immediately.
+  - Mansalis, Ntoutsi, Pelekis, Theodoridis (2018), "An evaluation of data
+    stream clustering algorithms," Statistical Analysis and Data Mining.
+  - Ghesmoune, Lebbah, Azzag (2020), "Data stream clustering: a review,"
+    Artificial Intelligence Review.
+  - Tareq, Sundararajan, Harwood, Bakar (2022), "A systematic review of
+    density grid-based clustering for data streams," IEEE Access.
+  - Erdinc, Kaya, Senol (2024), "MCMSTStream: applying minimum spanning
+    tree to KD-tree-based micro-clusters to define arbitrary-shaped
+    clusters in streaming data," Neural Computing and Applications. Cited
+    as contrast to this paper's own moons_drift failure (axis-aligned
+    cells cannot resolve non-convex shape at any resolution) and as a
+    concrete future-work direction (micro-cluster shape mechanism + grid
+    memory accounting).
+  - Rezaei, Sajedi (2025), "Data stream clustering with concept drift
+    using fractal dimension," Knowledge and Information Systems. Cited as
+    an alternative to pure time-decay for drift adaptation (explicit
+    drift detection via distance + fractal dimension, triggering
+    re-partitioning) -- ties to this paper's own "explicit concept drift
+    detection" future-work bullet.
+  - Nordahl, Boeva, Grahn, Persson Netz (2025), "On evaluation of data
+    stream clustering algorithms: a survey," IEEE Access.
+
+The four surveys/evaluations (Mansalis 2018, Ghesmoune 2020, Tareq 2022,
+Nordahl 2025) all independently report that density-grid-based methods
+trail micro-cluster-based methods (DenStream/DBSTREAM/CluStream-style) on
+cluster quality for evolving streams -- this is now cited in Related Work
+as literature-level context for this paper's own empirical finding
+(Section 8: river baselines beating both the fixed-grid frontier and
+AdaptiveDStream on ARI at a fraction of the memory, throughout the
+synthetic AND real-data results). Framed explicitly as "consistent with a
+known, recurring pattern in the density-grid family," not an anomaly
+specific to this prototype -- a materially stronger framing for peer
+review than leaving the finding to look like an isolated implementation
+bug. Searched specifically for a 2026-dated paper on this exact topic
+(adaptive/multi-resolution grid stream clustering) and found none; the
+newest citations are 2024-2025, which is accurately the most current
+literature as of this session, not a gap.
+
+latex/main.pdf recompiled clean after this change (25 pages, no undefined
+references, no multiply-defined labels) and copied to
+latex/output/adative_D_stream.pdf.
+
+A companion "Tracking the 13-week plan" protocol was added to CLAUDE.md
+this session, codifying the audit-before-trust approach used above (don't
+take the plan artifact's own checkboxes as ground truth for repo state)
+so future sessions repeat this process instead of re-deriving it.
