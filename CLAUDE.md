@@ -182,3 +182,35 @@ before considering the change done:
 Skip step 1-3 only for changes that can't affect any experiment's output (docs-only, comments, this file).
 When in doubt about whether a change is "results-affecting," rerun the experiment — these are cheap
 relative to leaving the paper's claims wrong.
+
+## Tracking the 13-week plan
+
+The user's research/application plan (13 weeks, paper-track items `p1`-`p29` and applications-track items
+`a1`-`a17`) lives in a private Claude artifact, not in this repo — ask the user for the current URL, or
+check recent conversation/`research_notes.txt` for it, before picking up plan-tracking work. The artifact
+stores its own checklist state (a `done: [...]` list) and lets the user (or an agent, if asked) toggle
+boxes and republish it.
+
+**The artifact's checkboxes are the user's own intent-tracking, not ground truth for repo state.** A box
+can be checked before the corresponding code actually lands, checked for a partial/worked-around version
+of what the item describes, or left unchecked after the real thing is already done. Treat every checkbox as
+a claim to verify, not a fact to report. When asked "what's done" or picking the next item to work on:
+
+1. Read the plan artifact (`Artifact` tool, `action: "read"`) to get the current item list and checklist
+   state.
+2. For each item relevant to the question, verify against the actual repository — grep for the described
+   function/behavior, read the relevant code, check whether an experiment script that would produce the
+   claimed result exists *and has been run* (an `outputs/*.json` with a recent timestamp, not just a
+   script that could produce one). Don't accept the checkbox alone as evidence either way.
+3. Report discrepancies explicitly (item checked but not actually in code; item unchecked but actually
+   done via a different mechanism than the item describes) — see `research_notes.txt` section 16 for a
+   worked example (`p7`'s "bounded reservoir" claimed done but not implemented; `p17`'s "unknown domains"
+   solved for the specific real-data experiments but not the general case the item names).
+4. Do not toggle the artifact's checkboxes or republish it unless the user asks — it's their own judgment
+   tracker, not just a completion log this repo's state should silently drive.
+5. Some plan items are literature/writing work, not code (e.g. `p22`-`p27`, or `p24`'s "refresh related
+   work" — use `WebSearch`, and verify each candidate citation's author/venue/year with a second, specific
+   query before adding a `\bibitem`; don't cite from a search-result summary alone). After landing any
+   item, results-affecting or not, follow "Keeping the paper in sync" above if it changed `outputs/`, and
+   append a dated `research_notes.txt` entry regardless, noting which plan item(s) it corresponds to so a
+   future audit (step 2 above) has something to check against.
