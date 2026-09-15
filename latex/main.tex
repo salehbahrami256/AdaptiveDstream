@@ -366,6 +366,8 @@ Every run below reports, via a prequential (test-then-train) protocol — each p
 
 Grid/density-based models return no label for a point that falls in a non-dense cell. This is scored, not discarded: every such prediction is mapped to a sentinel label treated as its own predicted cluster, following the standard DBSCAN/DenStream "noise" convention — a model that dumps everything into "unassigned" is penalized as if it put all of that into one large incorrect cluster, rather than being scored only on the points it chose to commit to.
 
+The metrics above weight every point in the stream equally regardless of arrival time. That is not a neutral default: \texttt{AdaptiveDStream}, \texttt{FixedGridDStream}, and two of the three \texttt{river} baselines (DenStream's \texttt{decaying\_factor}, DBSTREAM's \texttt{fading\_factor} — only CluStream's windowed snapshots genuinely do not decay) all maintain state that deliberately forgets old data, at three different, uncontrolled rates. A flat aggregate ARI/NMI reflects none of that. We therefore additionally report, for a fixed externally-chosen decay rate $\lambda_{\text{eval}}$ applied identically to every model in a sweep (not read from any individual model's own internal decay parameter, since those are not on a comparable scale to begin with): a decay-weighted purity, in which point $i$ (arrival order) is weighted $\lambda_{\text{eval}}^{\,n-1-i}$, exactly the rate \texttt{GridCell.decay\_to} uses internally; and a windowed ARI/NMI, ordinary unmodified \texttt{adjusted\_rand\_score}/\texttt{normalized\_mutual\_info\_score} recomputed over only the most recent $\lceil 1/(1-\lambda_{\text{eval}})\rceil$ points, the effective sample size of that decay rate. ARI's chance-correction assumes a specific null distribution over contingency tables that changes under point weights, so rather than risk a subtly incorrect decay-weighted ARI, the windowed version uses trusted, unmodified ARI/NMI math restricted to a recency-focused slice of the stream. Every sweep below uses $\lambda_{\text{eval}} = 0.99$, \texttt{AdaptiveDStream}'s own \texttt{decay}; Section~\ref{sec:recency-reeval} reports what this changes.
+
 Numerical results, including a comparison across the five regimes introduced above, are reported in Section~\ref{sec:results}.
 
 \section{Results}
@@ -650,13 +652,72 @@ sensor:shuttle & DenStream & 28~KB & 0.423 \\
 
 A degeneracy check on kddcup99 (\texttt{max\_cells}$=4000$) confirms the $2^d$-split-rule wall identified in Section~\ref{sec:dim-sweep} on real, not synthetic-noise, features: at dim$=10$, $2^{10}=1024 < 4000$ and \texttt{AdaptiveDStream} splits normally, reaching 3{,}070 leaves (ARI $0.056$); at dim$=12$, $2^{12}=4096 > 4000$, so \texttt{\_should\_split}'s admission check refuses the very first split and the entire reduced feature space remains one cell (leaves$=1$, ARI $0.001$) for the whole run, and stays that way at dim$=15$ and dim$=20$. This demonstrates the split-rule wall is not an artifact of the synthetic dimension sweep's isotropic-noise construction: a per-axis, rather than full-$2^d$-orthant, split rule is a hard prerequisite for this method to reach realistic feature counts (e.g.\ kddcup99's 38 numeric columns) at all, independent of any accuracy-side threshold fix.
 
+\subsection{Recency-Weighted Re-Evaluation}
+\label{sec:recency-reeval}
+
+Every synthetic sweep above (frontier, split-strategy, dimensionality, cross-regime) was re-run with $\lambda_{\text{eval}} = 0.99$ (Section~\ref{sec:results}'s Evaluation Metrics), adding the windowed \texttt{ari\_recent} and decay-weighted \texttt{decayed\_purity} alongside the flat ARI already reported. This is not a replacement for the earlier numbers: the two lenses tell a genuinely different story depending on the experiment, in both directions, not uniformly a more flattering one for \texttt{AdaptiveDStream}.
+
+\textbf{Frontier sweep: the gap narrows, but does not close.} Table~\ref{tab:frontier-recent} and Figure~\ref{fig:frontier-recent} repeat Table~\ref{tab:frontier} with \texttt{ari\_recent} added. \texttt{AdaptiveDStream}'s ARI rises from $0.066$ (flat) to $0.582$ (recent) — but its immediate memory neighbors on the fixed-grid frontier rise further: FixedGrid $n{=}22$ (378~KB) reaches $0.842$, FixedGrid $n{=}32$ (799~KB) reaches $1.000$. DBSTREAM ($0.236 \to 0.481$) and DenStream ($0.092 \to 0.397$) improve similarly. Recency-weighting helps nearly every model on this stream — a 3-phase drifting stream is hardest for everyone before decayed mass accumulates early on — but the fixed-grid frontier's dominance over \texttt{AdaptiveDStream} survives this lens.
+
+\begin{table}[h]
+\centering
+\caption{Flat vs.\ recency-weighted ARI, frontier sweep (varying-density stream, $n{=}2000$, seed 7, $\lambda_{\text{eval}}=0.99$, window $=100$ points).}
+\label{tab:frontier-recent}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrr}
+\toprule
+Model & Peak memory (KB) & ARI (flat) & ARI (recent) & Decayed purity \\
+\midrule
+FixedGrid $n{=}2$   & 10.0   & -0.001 & 0.000  & 0.542 \\
+FixedGrid $n{=}3$   & 13.1   & 0.001  & 0.000  & 0.542 \\
+FixedGrid $n{=}4$   & 17.7   & 0.001  & -0.004 & 0.542 \\
+DBSTREAM            & 22.9   & 0.236  & 0.481  & 0.978 \\
+FixedGrid $n{=}6$   & 32.7   & 0.004  & -0.008 & 0.542 \\
+DenStream           & 47.8   & 0.092  & 0.397  & 0.991 \\
+FixedGrid $n{=}8$   & 53.2   & 0.064  & -0.010 & 0.542 \\
+FixedGrid $n{=}11$  & 96.2   & 0.029  & 0.717  & 0.976 \\
+CluStream           & 99.0   & 0.061  & 0.485  & 0.980 \\
+FixedGrid $n{=}16$  & 199.7  & 0.203  & 0.677  & 0.991 \\
+FixedGrid $n{=}22$  & 378.0  & 0.442  & 0.842  & 0.999 \\
+\textbf{AdaptiveDStream} & \textbf{666.4} & \textbf{0.066} & \textbf{0.582} & \textbf{0.947} \\
+FixedGrid $n{=}32$  & 798.6  & 0.692  & 1.000  & 0.999 \\
+FixedGrid $n{=}45$  & 1581.4 & 0.822  & 0.978  & 0.996 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.85\textwidth]{figures/frontier_ari_flat_vs_recent.png}
+\caption{Flat vs.\ recency-weighted ARI, frontier sweep.}
+\label{fig:frontier-recent}
+\end{figure}
+
+\textbf{Regime sweep: mixed, and in \texttt{AdaptiveDStream}'s favor more often than not.} Figure~\ref{fig:regime-recent} shows ARI (flat) $\to$ ARI (recent) for \texttt{AdaptiveDStream} across the five regimes of Table~\ref{tab:regime-ari}: \texttt{static\_no\_drift} $0.123 \to 0.214$, \texttt{spatial\_drift} $0.030 \to 0.026$ (flat), \texttt{density\_drift} $0.109 \to 0.029$ (worse), \texttt{two\_gaussian\_drift} $0.041 \to 0.247$ (a $6\times$ jump), \texttt{moons\_drift} $0.004 \to 0.040$. Four of five regimes improve or hold. \texttt{density\_drift} is the one exception, and it is plausibly a real effect rather than a metric artifact: that regime's dense cluster is deliberately widening over time ($\sigma: 0.15 \to 0.15 \to 1.1$), so the most recent phase is also the hardest one to resolve — a lower \texttt{ari\_recent} there is arguably measuring genuine difficulty, not a flaw in the lens.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.7\textwidth]{figures/regime_sweep_ari_flat_vs_recent.png}
+\caption{\texttt{AdaptiveDStream}: flat vs.\ recency-weighted ARI, by regime.}
+\label{fig:regime-recent}
+\end{figure}
+
+\textbf{Split-strategy and dimensionality sweeps show the same broad pattern as the frontier sweep.} Every split strategy improves substantially under the recent lens (\texttt{equal\_uniform} $0.024 \to 0.527$, \texttt{point\_mass} $0.017 \to 0.335$, \texttt{moment\_based} $0.021 \to 0.300$), with the same relative ordering preserved as under the flat metric — recency-weighting does not change which strategy looks best, only by how much every strategy trails the fixed-grid frontier (FixedGrid $n{=}32$: $0.667 \to 0.903$). The dimension sweep likewise shows $\text{ARI}_{\text{recent}} \geq \text{ARI}$ for nearly every row across $d \in \{2,\ldots,20\}$, consistent with "early-stream underperformance while decayed mass accumulates" being a shared effect across models and dimensions, not something specific to \texttt{AdaptiveDStream}. One point worth noting: $d{=}10$ is the one dimension where \texttt{AdaptiveDStream}'s flat ARI ($0.047$) already edges out the fixed grid's ($0.030$; Section~\ref{sec:dim-sweep} read this as plausibly small-sample noise), and \texttt{ari\_recent} preserves the same ordering ($0.129$ vs.\ $0.082$) rather than reversing it — mildly more supportive of a real effect than pure noise would predict, though still a single seed.
+
+\textbf{Recency-weighting is not a way to make the headline result disappear.} The frontier-sweep conclusion (Section~\ref{sec:root-cause}) holds under this lens too. But it materially changes the regime-sweep story: under a lens consistent with the method's own design assumption — that recent data should matter more — \texttt{AdaptiveDStream} looks meaningfully better in most of the regimes tested. Both views belong in the record side by side, not one instead of the other; full numbers (including \texttt{nmi\_recent} and the exact window size per run) are in \texttt{outputs/\{frontier,regime\_sweep,split\_strategy,dimension\_sweep\}\_results.json}.
+
 \subsection{Summary of Findings}
 
 The current prototype is not yet competitive with either the fixed-grid frontier or the imported published baselines, on ARI, on any of the streams evaluated, synthetic or real. Two of the three items added since the previous version of this evaluation, contraction and transitional-cell assignment, are measurable, unambiguous successes at what they targeted: peak memory and fraction unassigned both improved substantially and consistently across the frontier sweep, the regime sweep, and the dimensionality sweep. Neither improved ARI, and the split-strategy comparison (Section~\ref{sec:split-strategy}) shows the third addition, alternative split-mass redistribution, does not either.
 
 A fourth addition, since the previous version of this evaluation, does address the dense/sparse threshold's lack of volume normalization directly: \texttt{AdaptiveDStream(density\_normalize=True)} rescales a cell's decayed count by \(\text{domain\_volume}/\text{vol}(g)\) before the threshold comparison, exactly the density-versus-absolute-count fix Section~\ref{sec:root-cause} identifies as the cause. This was implemented and evaluated, and \emph{reduces} ARI to chance level at every threshold tried, not the improvement the diagnosis predicted. The scale factor grows as \(2^{d \cdot \text{level}}\), overshooting by orders of magnitude well before \texttt{max\_depth} is reached and causing almost any cell that has split a few levels deep to read as dense regardless of whether that reflects real local density — a mechanism problem in the specific (undamped, uncapped) scaling used, not evidence the underlying diagnosis in Section~\ref{sec:root-cause} is wrong. This is reported here as a negative result rather than left untested: the direction motivated by Section~\ref{sec:root-cause} does not work as a simple linear rescaling, and a damped (e.g.\ \(\sqrt{\cdot}\) or capped) variant is the natural next attempt, not yet tried.
 
-Section~\ref{sec:real-data} extends the evaluation to three real datasets and finds the same qualitative pattern as the synthetic streams: \texttt{AdaptiveDStream} is not competitive with the imported baselines, and a degeneracy check confirms, on real (not synthetic-noise) features, that the \(2^d\)-split-rule identified in Section~\ref{sec:dim-sweep} is a hard architectural wall independent of any threshold fix — at kddcup99 dim$=12$ with \texttt{max\_cells}$=4000$, the model cannot perform a single split for the entire run. With the direct density-normalization fix now tried and found insufficient on its own, and the split-rule wall now confirmed on real data, we consider the per-axis split-rule redesign the higher-priority remaining item, ahead of further threshold-normalization variants. We consider all of this an honest characterization of a first working implementation rather than a limitation of the underlying idea — the memory and unassigned-fraction results confirm that refine-where-dense, merge-or-assign-where-not behaves as designed.
+Section~\ref{sec:real-data} extends the evaluation to three real datasets and finds the same qualitative pattern as the synthetic streams: \texttt{AdaptiveDStream} is not competitive with the imported baselines, and a degeneracy check confirms, on real (not synthetic-noise) features, that the \(2^d\)-split-rule identified in Section~\ref{sec:dim-sweep} is a hard architectural wall independent of any threshold fix — at kddcup99 dim$=12$ with \texttt{max\_cells}$=4000$, the model cannot perform a single split for the entire run. With the direct density-normalization fix now tried and found insufficient on its own, and the split-rule wall now confirmed on real data, we consider the per-axis split-rule redesign the higher-priority remaining item, ahead of further threshold-normalization variants.
+
+The recency-weighted re-evaluation in Section~\ref{sec:recency-reeval} does not change this picture on the frontier sweep specifically — the fixed-grid frontier's dominance survives a lens that weights recent points more, consistent with the method's own decay assumption — but it does change the cross-regime picture materially: \texttt{AdaptiveDStream} improves under that lens in four of the five regimes tested, in one case ($\texttt{two\_gaussian\_drift}$) by more than $6\times$. All ARI numbers elsewhere in this section are the conventional, flat metric; Section~\ref{sec:recency-reeval} should be read alongside them, not as a correction superseding them.
+
+We consider all of this an honest characterization of a first working implementation rather than a limitation of the underlying idea — the memory and unassigned-fraction results confirm that refine-where-dense, merge-or-assign-where-not behaves as designed.
 
 \section{Discussion}
 

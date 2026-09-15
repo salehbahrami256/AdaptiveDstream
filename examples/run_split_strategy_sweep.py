@@ -49,6 +49,8 @@ SEED = 7
 N_SAMPLES = 800
 FIXED_GRID_RESOLUTIONS = [8, 32]
 SPLIT_STRATEGIES = ["equal_uniform", "point_mass", "moment_based"]
+# See run_frontier_sweep.py's EVAL_DECAY comment.
+EVAL_DECAY = 0.99
 OUTPUT_DIR = Path("outputs")
 
 
@@ -69,9 +71,10 @@ def main() -> None:
         factory = lambda n=n_cells: FixedGridDStream(
             n_cells_per_dim=n, dense_threshold=2.0, sparse_threshold=0.3, **common,
         )
-        r = run_stream_eval(factory, X, y, phase=phase, name=f"FixedGrid(n={n_cells})")
+        r = run_stream_eval(factory, X, y, phase=phase, name=f"FixedGrid(n={n_cells})", eval_decay=EVAL_DECAY)
         results.append({**r.to_dict(), "family": "FixedGridDStream", "n_cells_per_dim": n_cells})
         log.info(f"FixedGrid n={n_cells:>3}  ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
+              f"ARI_recent={r.ari_recent:.3f}  decayed_purity={r.decayed_purity:.3f}  "
               f"peak_mem={r.peak_memory_bytes/1024:.1f}KB  unassigned={r.fraction_unassigned:.2f}")
 
     for strategy in SPLIT_STRATEGIES:
@@ -80,16 +83,18 @@ def main() -> None:
             split_threshold=0.05, max_depth=7, max_cells=3000,
             merge_threshold=0.01, merge_min_age=200, split_strategy=s,
         )
-        r = run_stream_eval(factory, X, y, phase=phase, name=f"AdaptiveDStream({strategy})")
+        r = run_stream_eval(factory, X, y, phase=phase, name=f"AdaptiveDStream({strategy})", eval_decay=EVAL_DECAY)
         results.append({**r.to_dict(), "family": "AdaptiveDStream", "split_strategy": strategy})
         log.info(f"AdaptiveDStream({strategy:<13}) ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
+              f"ARI_recent={r.ari_recent:.3f}  decayed_purity={r.decayed_purity:.3f}  "
               f"peak_mem={r.peak_memory_bytes/1024:.1f}KB  unassigned={r.fraction_unassigned:.2f}")
 
     for name, adapter in make_river_baselines(seed=SEED).items():
         factory = (lambda a=adapter: a)
-        r = run_stream_eval(factory, X, y, phase=phase, name=name)
+        r = run_stream_eval(factory, X, y, phase=phase, name=name, eval_decay=EVAL_DECAY)
         results.append({**r.to_dict(), "family": name})
         log.info(f"{name:<12}                  ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
+              f"ARI_recent={r.ari_recent:.3f}  decayed_purity={r.decayed_purity:.3f}  "
               f"peak_mem={r.peak_memory_bytes/1024:.1f}KB  unassigned={r.fraction_unassigned:.2f}")
 
     OUTPUT_DIR.mkdir(exist_ok=True)

@@ -6,9 +6,9 @@
     "nmi": 0.014181225296976697,
     "purity": 0.519,
     "fraction_unassigned": 0.004,
-    "peak_memory_bytes": 7608,
-    "elapsed_seconds": 0.19936340001004282,
-    "throughput_pts_per_sec": 10031.93163789969,
+    "peak_memory_bytes": 10222,
+    "elapsed_seconds": 0.21037129999604076,
+    "throughput_pts_per_sec": 9507.00024213208,
     "ari_by_phase": {
       "0": 0.0037135656050668537,
       "1": 0.0,
@@ -96,6 +96,11 @@
         4
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.5417800947789506,
+    "ari_recent": 0.0,
+    "nmi_recent": 0.0,
+    "recent_window": 100,
     "family": "FixedGridDStream",
     "n_cells_per_dim": 2
   },
@@ -106,9 +111,9 @@
     "nmi": 0.002143832204834168,
     "purity": 0.5215,
     "fraction_unassigned": 0.0095,
-    "peak_memory_bytes": 11448,
-    "elapsed_seconds": 0.37095949999638833,
-    "throughput_pts_per_sec": 5391.424131258189,
+    "peak_memory_bytes": 13454,
+    "elapsed_seconds": 0.3878316000336781,
+    "throughput_pts_per_sec": 5156.877365914294,
     "ari_by_phase": {
       "0": -8.873015808393498e-05,
       "1": 0.0029849268677824303,
@@ -196,6 +201,11 @@
         9
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.5420134342670347,
+    "ari_recent": 0.0,
+    "nmi_recent": 0.0,
+    "recent_window": 100,
     "family": "FixedGridDStream",
     "n_cells_per_dim": 3
   },
@@ -206,9 +216,9 @@
     "nmi": 0.021372400688521323,
     "purity": 0.5295,
     "fraction_unassigned": 0.0145,
-    "peak_memory_bytes": 16800,
-    "elapsed_seconds": 0.5610547999967821,
-    "throughput_pts_per_sec": 3564.714177672967,
+    "peak_memory_bytes": 18166,
+    "elapsed_seconds": 0.5667782000382431,
+    "throughput_pts_per_sec": 3528.717229888254,
     "ari_by_phase": {
       "0": 0.0015605556737703103,
       "1": 0.0015976816023035136,
@@ -296,6 +306,11 @@
         16
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.5417800946231015,
+    "ari_recent": -0.004284949116229245,
+    "nmi_recent": 0.015736872534476518,
+    "recent_window": 100,
     "family": "FixedGridDStream",
     "n_cells_per_dim": 4
   },
@@ -306,9 +321,9 @@
     "nmi": 0.041960585047118866,
     "purity": 0.543,
     "fraction_unassigned": 0.031,
-    "peak_memory_bytes": 32608,
-    "elapsed_seconds": 2.7709270999912405,
-    "throughput_pts_per_sec": 721.7800858082201,
+    "peak_memory_bytes": 33462,
+    "elapsed_seconds": 1.347180999990087,
+    "throughput_pts_per_sec": 1484.5815076182907,
     "ari_by_phase": {
       "0": 0.0035594315245354334,
       "1": 0.008118419010844995,
@@ -396,6 +411,11 @@
         36
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.5417801485591734,
+    "ari_recent": -0.007760604115428168,
+    "nmi_recent": 0.029992248470637264,
+    "recent_window": 100,
     "family": "FixedGridDStream",
     "n_cells_per_dim": 6
   },
@@ -406,9 +426,9 @@
     "nmi": 0.20004869561725463,
     "purity": 0.64,
     "fraction_unassigned": 0.0445,
-    "peak_memory_bytes": 54248,
-    "elapsed_seconds": 6.602452399994945,
-    "throughput_pts_per_sec": 302.9177461395301,
+    "peak_memory_bytes": 54526,
+    "elapsed_seconds": 2.1470325999544,
+    "throughput_pts_per_sec": 931.5182266177407,
     "ari_by_phase": {
       "0": 0.8150011971142904,
       "1": 0.009847359249466912,
@@ -496,6 +516,11 @@
         64
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.5417808049290029,
+    "ari_recent": -0.010427427162149738,
+    "nmi_recent": 0.04327747234909861,
+    "recent_window": 100,
     "family": "FixedGridDStream",
     "n_cells_per_dim": 8
   },
@@ -506,9 +531,9 @@
     "nmi": 0.0797264033504562,
     "purity": 0.6105,
     "fraction_unassigned": 0.1005,
-    "peak_memory_bytes": 98536,
-    "elapsed_seconds": 11.43651649999083,
-    "throughput_pts_per_sec": 174.87842561164527,
+    "peak_memory_bytes": 98504,
+    "elapsed_seconds": 3.89552590000676,
+    "throughput_pts_per_sec": 513.4094988295494,
     "ari_by_phase": {
       "0": 0.5168115812823617,
       "1": 0.025319638414753716,
@@ -596,6 +621,11 @@
         121
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.9759012929993216,
+    "ari_recent": 0.7174320222179165,
+    "nmi_recent": 0.7264645598278113,
+    "recent_window": 100,
     "family": "FixedGridDStream",
     "n_cells_per_dim": 11
   },
@@ -606,9 +636,9 @@
     "nmi": 0.2051934801012152,
     "purity": 0.789,
     "fraction_unassigned": 0.268,
-    "peak_memory_bytes": 204216,
-    "elapsed_seconds": 17.14969370000472,
-    "throughput_pts_per_sec": 116.62015864455059,
+    "peak_memory_bytes": 204464,
+    "elapsed_seconds": 6.100968599959742,
+    "throughput_pts_per_sec": 327.8167994526635,
     "ari_by_phase": {
       "0": 0.2260844754669917,
       "1": 0.14709035881892893,
@@ -696,6 +726,11 @@
         256
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.9905909948219634,
+    "ari_recent": 0.6771740534025855,
+    "nmi_recent": 0.6974626344949516,
+    "recent_window": 100,
     "family": "FixedGridDStream",
     "n_cells_per_dim": 16
   },
@@ -706,9 +741,9 @@
     "nmi": 0.4029900288779858,
     "purity": 0.9155,
     "fraction_unassigned": 0.4185,
-    "peak_memory_bytes": 387024,
-    "elapsed_seconds": 21.901442600006703,
-    "throughput_pts_per_sec": 91.31818558834969,
+    "peak_memory_bytes": 387064,
+    "elapsed_seconds": 7.544819400005508,
+    "throughput_pts_per_sec": 265.08255452722165,
     "ari_by_phase": {
       "0": 0.45958961320715763,
       "1": 0.36209966504602636,
@@ -796,6 +831,11 @@
         484
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.9987360777870213,
+    "ari_recent": 0.8421279306601107,
+    "nmi_recent": 0.8407721340335222,
+    "recent_window": 100,
     "family": "FixedGridDStream",
     "n_cells_per_dim": 22
   },
@@ -806,9 +846,9 @@
     "nmi": 0.6268081551491058,
     "purity": 0.963,
     "fraction_unassigned": 0.482,
-    "peak_memory_bytes": 817736,
-    "elapsed_seconds": 36.58267000000342,
-    "throughput_pts_per_sec": 54.670695167952836,
+    "peak_memory_bytes": 817784,
+    "elapsed_seconds": 13.10393689997727,
+    "throughput_pts_per_sec": 152.62588756845045,
     "ari_by_phase": {
       "0": 0.6416921515535704,
       "1": 0.6400185068621582,
@@ -896,6 +936,11 @@
         1024
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.9993560247470669,
+    "ari_recent": 1.0,
+    "nmi_recent": 1.0,
+    "recent_window": 100,
     "family": "FixedGridDStream",
     "n_cells_per_dim": 32
   },
@@ -906,9 +951,9 @@
     "nmi": 0.7387148596241817,
     "purity": 0.9645,
     "fraction_unassigned": 0.5055,
-    "peak_memory_bytes": 1619280,
-    "elapsed_seconds": 51.77868010000384,
-    "throughput_pts_per_sec": 38.62593631466191,
+    "peak_memory_bytes": 1619360,
+    "elapsed_seconds": 23.299362800025847,
+    "throughput_pts_per_sec": 85.83925737221368,
     "ari_by_phase": {
       "0": 0.8381690956316662,
       "1": 0.7511933179676085,
@@ -996,6 +1041,11 @@
         2025
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.9964054879883889,
+    "ari_recent": 0.9777795334689605,
+    "nmi_recent": 0.9647237178921511,
+    "recent_window": 100,
     "family": "FixedGridDStream",
     "n_cells_per_dim": 45
   },
@@ -1007,8 +1057,8 @@
     "purity": 0.7135,
     "fraction_unassigned": 0.213,
     "peak_memory_bytes": 682416,
-    "elapsed_seconds": 86.39228250000451,
-    "throughput_pts_per_sec": 23.150215992960895,
+    "elapsed_seconds": 91.9778806999675,
+    "throughput_pts_per_sec": 21.7443583694216,
     "ari_by_phase": {
       "0": 0.03270138271878659,
       "1": 0.08548165227349414,
@@ -1096,6 +1146,11 @@
         637
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.9469462482314318,
+    "ari_recent": 0.581860907313398,
+    "nmi_recent": 0.5503627238618142,
+    "recent_window": 100,
     "family": "AdaptiveDStream",
     "n_cells_per_dim": null
   },
@@ -1106,9 +1161,9 @@
     "nmi": 0.20246305007122864,
     "purity": 0.842,
     "fraction_unassigned": 0.0,
-    "peak_memory_bytes": 49080,
-    "elapsed_seconds": 0.8044499999959953,
-    "throughput_pts_per_sec": 2486.170675629258,
+    "peak_memory_bytes": 48960,
+    "elapsed_seconds": 0.8512504999525845,
+    "throughput_pts_per_sec": 2349.484670037083,
     "ari_by_phase": {
       "0": 0.5414971031614828,
       "1": 0.2557510160274418,
@@ -1196,6 +1251,11 @@
         19
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.9909047275132726,
+    "ari_recent": 0.39667047003548417,
+    "nmi_recent": 0.47953444683313806,
+    "recent_window": 100,
     "family": "DenStream",
     "n_cells_per_dim": null
   },
@@ -1206,9 +1266,9 @@
     "nmi": 0.08441109452158814,
     "purity": 0.687,
     "fraction_unassigned": 0.0,
-    "peak_memory_bytes": 102040,
-    "elapsed_seconds": 0.3095830999955069,
-    "throughput_pts_per_sec": 6460.300966134865,
+    "peak_memory_bytes": 101344,
+    "elapsed_seconds": 0.2937161999871023,
+    "throughput_pts_per_sec": 6809.294142058981,
     "ari_by_phase": {
       "0": 0.19597352651213681,
       "1": 0.06356294224959756,
@@ -1296,6 +1356,11 @@
         50
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.9796556472885612,
+    "ari_recent": 0.4849671164073801,
+    "nmi_recent": 0.557427801562322,
+    "recent_window": 100,
     "family": "CluStream",
     "n_cells_per_dim": null
   },
@@ -1306,9 +1371,9 @@
     "nmi": 0.22077627748314857,
     "purity": 0.806,
     "fraction_unassigned": 0.0,
-    "peak_memory_bytes": 23744,
-    "elapsed_seconds": 0.26424830000905786,
-    "throughput_pts_per_sec": 7568.639041127017,
+    "peak_memory_bytes": 23400,
+    "elapsed_seconds": 0.255947700003162,
+    "throughput_pts_per_sec": 7814.096395378007,
     "ari_by_phase": {
       "0": 0.5476957941945396,
       "1": 0.07160480151143603,
@@ -1396,6 +1461,11 @@
         6
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.9781115453180075,
+    "ari_recent": 0.4805408970976253,
+    "nmi_recent": 0.54875960177923,
+    "recent_window": 100,
     "family": "DBSTREAM",
     "n_cells_per_dim": null
   }

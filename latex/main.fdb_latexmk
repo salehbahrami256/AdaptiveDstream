@@ -1,5 +1,5 @@
 # Fdb version 4
-["pdflatex"] 1789486453.9402 "main.tex" "main.pdf" "main" 1789486455.83949 0
+["pdflatex"] 1789495858.74614 "main.tex" "main.pdf" "main" 1789495861.01361 0
   "C:/Users/ms.bahrami/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map" 1789486451.63082 80909 eab91d9745dd2edfd62a31d53cd5fe15 ""
   "C:/Users/ms.bahrami/AppData/Local/MiKTeX/fonts/pk/ljfour/jknappen/ec/dpi600/tcrm1095.pk" 1788811418.25155 12668 4c1247cb3ceae4f32c389312ea012990 ""
   "C:/Users/ms.bahrami/AppData/Local/MiKTeX/miktex/data/le/pdftex/pdflatex.fmt" 1788810499.24006 13375494 b9ed16d63116d9779c40589f2399ba0c ""
@@ -35,6 +35,7 @@
   "C:/Users/ms.bahrami/AppData/Local/Programs/MiKTeX/fonts/tfm/public/cm/cmti8.tfm" 1136765053 1504 1747189e0441d1c18f3ea56fafc1c480 ""
   "C:/Users/ms.bahrami/AppData/Local/Programs/MiKTeX/fonts/tfm/public/cm/cmtt10.tfm" 1136765053 768 1321e9409b4137d6fb428ac9dc956269 ""
   "C:/Users/ms.bahrami/AppData/Local/Programs/MiKTeX/fonts/tfm/public/cm/cmtt12.tfm" 1136765053 772 9a936b7f5e2ff0557fce0f62822f0bbf ""
+  "C:/Users/ms.bahrami/AppData/Local/Programs/MiKTeX/fonts/tfm/public/cm/cmtt8.tfm" 1136765053 768 d7b9a2629a0c353102ad947dc9221d49 ""
   "C:/Users/ms.bahrami/AppData/Local/Programs/MiKTeX/fonts/tfm/public/cm/cmtt9.tfm" 1136765053 764 c98a2af25c99b73a368cf7336e255190 ""
   "C:/Users/ms.bahrami/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx10.pfb" 1247596666 34811 78b52f49e893bcba91bd7581cdc144c0 ""
   "C:/Users/ms.bahrami/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx12.pfb" 1247596666 32080 340ef9bf63678554ee606688e7b5339d ""
@@ -120,15 +121,17 @@
   "figures/cell_equidistribution_calibration.png" 1789485496.95149 66254 8a02f72ab6133d8e711d0d45203a00fe ""
   "figures/dimension_sweep_ari.png" 1789485496.95149 77768 b0d14459811b1c6b8238d59f53ff1358 ""
   "figures/dimension_sweep_memory.png" 1789485496.95149 68040 5f2d5a05651222fafa7872fb38012663 ""
+  "figures/frontier_ari_flat_vs_recent.png" 1789495810.88587 72005 01f193a6dcd8872735e29a3739274eb3 ""
   "figures/frontier_ari_vs_memory.png" 1788810284.80658 70591 5f88b0bfee5b661f959f7d6d20130cc1 ""
   "figures/frontier_nmi_vs_memory.png" 1788810284.82034 75998 fe4b4225079f6fd3417182038db0d775 ""
   "figures/real_frontier_ari.png" 1789485496.95149 127187 831a9b33737e83c1f25ef2077ddcc8a4 ""
   "figures/real_frontier_nmi.png" 1789485496.95149 121681 a75b067062f6310d0ea56f046dd84b50 ""
   "figures/regime_sweep_ari.png" 1788810284.83138 57596 44f16731fda4325a603b29e99877f786 ""
+  "figures/regime_sweep_ari_flat_vs_recent.png" 1789495810.88788 45002 01368a095c6b8006918cd0f0229f421b ""
   "figures/split_strategy_ari.png" 1788810284.83243 72014 0ab34d8b3687f4740ae6556b94017450 ""
-  "main.aux" 1789486455.47401 15121 13965d2e4d634c9394fb5f01e84f63bf "pdflatex"
-  "main.out" 1789486455.47401 6087 fe31e43b79457f9b6dc20bbbdb70148c "pdflatex"
-  "main.tex" 1789486439.40171 88880 bd0f666bf2a381477000de0a71445814 ""
+  "main.aux" 1789495860.61967 16372 cfca68e3f52e54ab582aa50b1cd13d63 "pdflatex"
+  "main.out" 1789495860.62178 6299 cc99f9714bd47ba4f1ca9bbc0fc5bfba "pdflatex"
+  "main.tex" 1789495849.37793 97094 599b91e9f8248b50d3bfb36fa8bf7daf ""
   (generated)
   "main.aux"
   "main.log"

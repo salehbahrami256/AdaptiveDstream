@@ -48,6 +48,47 @@ def purity_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     return total_correct / len(y_true)
 
 
+def decayed_purity_score(y_true: np.ndarray, y_pred: np.ndarray, decay: float) -> float:
+    """Recency-weighted purity: the same majority-label-per-cluster idea as
+    :func:`purity_score`, but each point ``i`` (arrival order, 0-indexed) is
+    weighted ``decay ** (n - 1 - i)`` — the most recent point gets weight 1,
+    older points fade out at exactly the rate ``AdaptiveDStream``'s own
+    ``GridCell.decay_to`` uses internally.
+
+    This exists because the ordinary (flat) ARI/NMI/purity above weight
+    every point in the stream equally regardless of arrival time, which
+    silently assumes "every timestep matters forever" — an assumption none
+    of the decay-based models being compared (``AdaptiveDStream``,
+    ``FixedGridDStream``, river's ``DenStream``/``DBSTREAM``) actually make
+    internally, and one that ``CluStream`` (windowed, not decayed) doesn't
+    make either. A flat aggregate is not a neutral yardstick; this is a
+    complementary, explicitly recency-weighted one, not a replacement.
+
+    Purity generalizes cleanly to a weighted version (sum per-cluster
+    weighted majority-label mass, divide by total weight) because it is a
+    per-point statistic. ARI is not — it's defined via combinatorial counts
+    over *pairs* of points, and its "adjusted for chance" correction assumes
+    a specific null distribution over contingency tables that changes under
+    weights, so a decay-weighted ARI needs a properly re-derived correction
+    term rather than a naive weighted plug-in. Not attempted here; see
+    ``run_stream_eval``'s ``eval_decay`` docstring for the windowed
+    ARI/NMI used instead, and ``research_notes.txt`` if this gets revisited.
+    """
+    y_true = np.asarray(y_true)
+    y_pred = np.asarray(y_pred)
+    n = len(y_true)
+    if n == 0:
+        return float("nan")
+    weights = decay ** (n - 1 - np.arange(n))
+    total_correct = 0.0
+    for cluster in np.unique(y_pred):
+        mask = y_pred == cluster
+        labels = np.unique(y_true[mask])
+        best = max(weights[mask][y_true[mask] == label].sum() for label in labels)
+        total_correct += best
+    return float(total_correct / weights.sum())
+
+
 def _active_cell_count(model) -> int | None:
     summary_fn = getattr(model, "summary", None)
     if summary_fn is None:
@@ -66,12 +107,17 @@ class EvalResult:
     peak_memory_bytes: int
     elapsed_seconds: float
     n_points: int
+    eval_decay: float | None = None
     ari: float = field(init=False)
     nmi: float = field(init=False)
     purity: float = field(init=False)
     throughput_pts_per_sec: float = field(init=False)
     fraction_unassigned: float = field(init=False)
     ari_by_phase: dict = field(init=False)
+    decayed_purity: float | None = field(init=False)
+    ari_recent: float | None = field(init=False)
+    nmi_recent: float | None = field(init=False)
+    recent_window: int | None = field(init=False)
 
     def __post_init__(self) -> None:
         self.ari = adjusted_rand_score(self.y_true, self.y_pred)
@@ -86,6 +132,30 @@ class EvalResult:
                 if mask.sum() > 1:
                     self.ari_by_phase[int(p)] = adjusted_rand_score(self.y_true[mask], self.y_pred[mask])
 
+        self.decayed_purity = None
+        self.ari_recent = None
+        self.nmi_recent = None
+        self.recent_window = None
+        if self.eval_decay is not None:
+            self.decayed_purity = decayed_purity_score(self.y_true, self.y_pred, self.eval_decay)
+            # Effective sample size of an exponential fade at this decay
+            # rate (see research_notes.txt sec. 8): 1/(1-decay) points carry
+            # most of the weight. Recomputing plain, unmodified ARI/NMI over
+            # just that many of the most recent points gives a genuinely
+            # recency-focused reading using trusted sklearn math, sidestepping
+            # the need to re-derive ARI's chance-correction under weights
+            # (see decayed_purity_score's docstring for why that's not done
+            # here). This window is fixed externally by eval_decay, applied
+            # identically to every model in a sweep -- it does not read any
+            # model's own internal decay/fading parameter, so it stays a
+            # single, controlled comparison lens across models whose own
+            # rates differ (or, for CluStream, don't exist at all).
+            w = min(self.n_points, int(np.ceil(1.0 / (1.0 - self.eval_decay))))
+            self.recent_window = w
+            if w > 1:
+                self.ari_recent = adjusted_rand_score(self.y_true[-w:], self.y_pred[-w:])
+                self.nmi_recent = normalized_mutual_info_score(self.y_true[-w:], self.y_pred[-w:])
+
     def to_dict(self) -> dict:
         return {
             "name": self.name,
@@ -99,6 +169,11 @@ class EvalResult:
             "throughput_pts_per_sec": self.throughput_pts_per_sec,
             "ari_by_phase": self.ari_by_phase,
             "active_cells_over_time": self.active_cells_over_time,
+            "eval_decay": self.eval_decay,
+            "decayed_purity": self.decayed_purity,
+            "ari_recent": self.ari_recent,
+            "nmi_recent": self.nmi_recent,
+            "recent_window": self.recent_window,
         }
 
 
@@ -109,6 +184,7 @@ def run_stream_eval(
     phase: np.ndarray | None = None,
     name: str = "model",
     snapshot_every: int = 100,
+    eval_decay: float | None = None,
 ) -> EvalResult:
     """Build a fresh model via ``model_factory()`` and drive it over the
     stream ``X``, scoring it against ``y_true``.
@@ -133,6 +209,22 @@ def run_stream_eval(
     absolute throughput numbers are lower than an un-instrumented run would
     give. That overhead is applied identically to every model in a sweep,
     so relative throughput comparisons between models remain valid.
+
+    ``eval_decay`` (default ``None``, i.e. off — every field below stays
+    ``None`` and existing callers/results are unaffected) adds a second,
+    explicitly recency-weighted view alongside the ordinary (flat, every
+    point equally weighted) ARI/NMI/purity above: ``decayed_purity`` and a
+    windowed ``ari_recent``/``nmi_recent`` over the most recent
+    ``recent_window = ceil(1/(1-eval_decay))`` points (that formula is the
+    effective sample size of an exponential fade at this rate — see
+    ``research_notes.txt`` sec. 8). This rate is a single value fixed by the
+    caller and applied identically to every model in a sweep; it is
+    *not* read from any individual model's own internal decay/fading
+    parameter (``AdaptiveDStream.decay``, river's ``decaying_factor``/
+    ``fading_factor``, or CluStream's windowing, which don't share a
+    timescale in the first place), so this stays one controlled comparison
+    lens, not a different one per model. See ``decayed_purity_score``'s
+    docstring for why ARI itself isn't decay-weighted directly.
     """
     n = len(X)
     y_pred = np.empty(n, dtype=int)
@@ -164,6 +256,7 @@ def run_stream_eval(
         y_pred=y_pred,
         phase=None if phase is None else np.asarray(phase),
         active_cells_over_time=active_cells_over_time,
+        eval_decay=eval_decay,
         peak_memory_bytes=peak,
         elapsed_seconds=elapsed,
         n_points=n,

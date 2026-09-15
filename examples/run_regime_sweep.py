@@ -66,6 +66,10 @@ SEED = 7
 # 4000-point AdaptiveDStream run take well over a minute.
 N_SAMPLES = 500
 FIXED_GRID_RESOLUTIONS = [8, 32]
+# See run_frontier_sweep.py's EVAL_DECAY comment: one externally-fixed
+# recency-weighted lens applied identically to every model, not each
+# model's own internal decay/fading parameter.
+EVAL_DECAY = 0.99
 OUTPUT_DIR = Path("outputs")
 
 
@@ -111,10 +115,11 @@ def main() -> None:
             factory = lambda n=n_cells: FixedGridDStream(
                 n_cells_per_dim=n, dense_threshold=2.0, sparse_threshold=0.3, **common,
             )
-            r = run_stream_eval(factory, X, y, phase=phase, name=f"FixedGrid(n={n_cells})")
+            r = run_stream_eval(factory, X, y, phase=phase, name=f"FixedGrid(n={n_cells})", eval_decay=EVAL_DECAY)
             results.append({**r.to_dict(), "regime": regime_name, "family": "FixedGridDStream",
                              "n_cells_per_dim": n_cells})
             log.info(f"  FixedGrid n={n_cells:>3}  ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
+                  f"ARI_recent={r.ari_recent:.3f}  decayed_purity={r.decayed_purity:.3f}  "
                   f"peak_mem={r.peak_memory_bytes/1024:.1f}KB  unassigned={r.fraction_unassigned:.2f}")
 
         # Same AdaptiveDStream hyperparameters in every regime -- see module
@@ -124,17 +129,19 @@ def main() -> None:
             split_threshold=0.05, max_depth=7, max_cells=3000,
             merge_threshold=0.01, merge_min_age=200,
         )
-        r = run_stream_eval(adaptive_factory, X, y, phase=phase, name="AdaptiveDStream")
+        r = run_stream_eval(adaptive_factory, X, y, phase=phase, name="AdaptiveDStream", eval_decay=EVAL_DECAY)
         results.append({**r.to_dict(), "regime": regime_name, "family": "AdaptiveDStream",
                          "n_cells_per_dim": None})
         log.info(f"  AdaptiveDStream      ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
+              f"ARI_recent={r.ari_recent:.3f}  decayed_purity={r.decayed_purity:.3f}  "
               f"peak_mem={r.peak_memory_bytes/1024:.1f}KB  unassigned={r.fraction_unassigned:.2f}")
 
         for name, adapter in make_river_baselines(seed=SEED).items():
             factory = (lambda a=adapter: a)
-            r = run_stream_eval(factory, X, y, phase=phase, name=name)
+            r = run_stream_eval(factory, X, y, phase=phase, name=name, eval_decay=EVAL_DECAY)
             results.append({**r.to_dict(), "regime": regime_name, "family": name, "n_cells_per_dim": None})
             log.info(f"  {name:<12}         ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
+                  f"ARI_recent={r.ari_recent:.3f}  decayed_purity={r.decayed_purity:.3f}  "
                   f"peak_mem={r.peak_memory_bytes/1024:.1f}KB  unassigned={r.fraction_unassigned:.2f}")
 
     OUTPUT_DIR.mkdir(exist_ok=True)

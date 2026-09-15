@@ -6,9 +6,9 @@
     "nmi": 0.4706824438883885,
     "purity": 0.938,
     "fraction_unassigned": 0.144,
-    "peak_memory_bytes": 58726,
-    "elapsed_seconds": 0.7364612999954261,
-    "throughput_pts_per_sec": 678.9223004699709,
+    "peak_memory_bytes": 59144,
+    "elapsed_seconds": 0.7070289999828674,
+    "throughput_pts_per_sec": 707.1845709470416,
     "ari_by_phase": {
       "0": 0.23535542540382906,
       "1": 0.7421284884777185,
@@ -36,6 +36,11 @@
         64
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.9576535177702796,
+    "ari_recent": 0.6111583798069441,
+    "nmi_recent": 0.6165058209080815,
+    "recent_window": 100,
     "regime": "static_no_drift",
     "family": "FixedGridDStream",
     "n_cells_per_dim": 8
@@ -47,9 +52,9 @@
     "nmi": 0.7295533701263102,
     "purity": 0.96,
     "fraction_unassigned": 0.542,
-    "peak_memory_bytes": 816824,
-    "elapsed_seconds": 2.5367364999983693,
-    "throughput_pts_per_sec": 197.1036408394492,
+    "peak_memory_bytes": 816952,
+    "elapsed_seconds": 2.736198599974159,
+    "throughput_pts_per_sec": 182.73527367667026,
     "ari_by_phase": {
       "0": 0.750817062123614,
       "1": 0.9290094151362953,
@@ -77,6 +82,11 @@
         1024
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.9593984830918217,
+    "ari_recent": 0.6380419371761922,
+    "nmi_recent": 0.6515162011080077,
+    "recent_window": 100,
     "regime": "static_no_drift",
     "family": "FixedGridDStream",
     "n_cells_per_dim": 32
@@ -89,8 +99,8 @@
     "purity": 0.754,
     "fraction_unassigned": 0.052,
     "peak_memory_bytes": 212360,
-    "elapsed_seconds": 8.546965599991381,
-    "throughput_pts_per_sec": 58.500293952336044,
+    "elapsed_seconds": 8.559353900025599,
+    "throughput_pts_per_sec": 58.415624104350286,
     "ari_by_phase": {
       "0": 0.01773124527317857,
       "1": 0.21327090192816173,
@@ -118,6 +128,11 @@
         199
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.8426277891990474,
+    "ari_recent": 0.2139055710170402,
+    "nmi_recent": 0.3118317923756619,
+    "recent_window": 100,
     "regime": "static_no_drift",
     "family": "AdaptiveDStream",
     "n_cells_per_dim": null
@@ -129,9 +144,9 @@
     "nmi": 0.49789264470753186,
     "purity": 0.94,
     "fraction_unassigned": 0.0,
-    "peak_memory_bytes": 29624,
-    "elapsed_seconds": 0.056904500001110137,
-    "throughput_pts_per_sec": 8786.65131914428,
+    "peak_memory_bytes": 29504,
+    "elapsed_seconds": 0.05948890000581741,
+    "throughput_pts_per_sec": 8404.929322127406,
     "ari_by_phase": {
       "0": 0.31847345429960455,
       "1": 0.8069035715292661,
@@ -159,6 +174,11 @@
         10
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.9972112768110112,
+    "ari_recent": 0.6220185849465177,
+    "nmi_recent": 0.6224970902120682,
+    "recent_window": 100,
     "regime": "static_no_drift",
     "family": "DenStream",
     "n_cells_per_dim": null
@@ -170,9 +190,9 @@
     "nmi": 0.3013697674573825,
     "purity": 0.82,
     "fraction_unassigned": 0.0,
-    "peak_memory_bytes": 100392,
-    "elapsed_seconds": 0.07085420000657905,
-    "throughput_pts_per_sec": 7056.74469478977,
+    "peak_memory_bytes": 99696,
+    "elapsed_seconds": 0.07281829998828471,
+    "throughput_pts_per_sec": 6866.405835901716,
     "ari_by_phase": {
       "0": 0.08556297753273134,
       "1": 0.7001481501985165,
@@ -200,6 +220,11 @@
         50
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.8992079962917356,
+    "ari_recent": 0.6578262358772853,
+    "nmi_recent": 0.6871441202925532,
+    "recent_window": 100,
     "regime": "static_no_drift",
     "family": "CluStream",
     "n_cells_per_dim": null
@@ -211,9 +236,9 @@
     "nmi": 0.5288458677724345,
     "purity": 0.978,
     "fraction_unassigned": 0.0,
-    "peak_memory_bytes": 17208,
-    "elapsed_seconds": 0.030689400009578094,
-    "throughput_pts_per_sec": 16292.270290196326,
+    "peak_memory_bytes": 16568,
+    "elapsed_seconds": 0.03308260004268959,
+    "throughput_pts_per_sec": 15113.685120117614,
     "ari_by_phase": {
       "0": 0.47609666723518557,
       "1": 0.7164433926089665,
@@ -241,6 +266,11 @@
         10
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.9867224258218111,
+    "ari_recent": 0.4895995495590827,
+    "nmi_recent": 0.5239629552518468,
+    "recent_window": 100,
     "regime": "static_no_drift",
     "family": "DBSTREAM",
     "n_cells_per_dim": null
@@ -252,9 +282,9 @@
     "nmi": 0.14451329374700897,
     "purity": 0.604,
     "fraction_unassigned": 0.114,
-    "peak_memory_bytes": 52808,
-    "elapsed_seconds": 0.5824830999918049,
-    "throughput_pts_per_sec": 858.3940032028992,
+    "peak_memory_bytes": 53200,
+    "elapsed_seconds": 0.6016552000073716,
+    "throughput_pts_per_sec": 831.0407688554407,
     "ari_by_phase": {
       "0": 0.36255573419879344,
       "1": 0.03263745992165024,
@@ -282,6 +312,11 @@
         64
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.5984738349789539,
+    "ari_recent": 0.012184899471542247,
+    "nmi_recent": 0.08309634007722037,
+    "recent_window": 100,
     "regime": "spatial_drift",
     "family": "FixedGridDStream",
     "n_cells_per_dim": 8
@@ -293,9 +328,9 @@
     "nmi": 0.6865822659672725,
     "purity": 0.944,
     "fraction_unassigned": 0.548,
-    "peak_memory_bytes": 816248,
-    "elapsed_seconds": 2.7105597000045236,
-    "throughput_pts_per_sec": 184.46374746852672,
+    "peak_memory_bytes": 816392,
+    "elapsed_seconds": 2.782123400014825,
+    "throughput_pts_per_sec": 179.71884352697498,
     "ari_by_phase": {
       "0": 0.7364151176434064,
       "1": 0.8164689255638921,
@@ -323,6 +358,11 @@
         1024
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.953147965051884,
+    "ari_recent": 0.8448387581811067,
+    "nmi_recent": 0.7962708293212066,
+    "recent_window": 100,
     "regime": "spatial_drift",
     "family": "FixedGridDStream",
     "n_cells_per_dim": 32
@@ -335,8 +375,8 @@
     "purity": 0.608,
     "fraction_unassigned": 0.03,
     "peak_memory_bytes": 201840,
-    "elapsed_seconds": 7.8098890999972355,
-    "throughput_pts_per_sec": 64.02139564314389,
+    "elapsed_seconds": 7.947140500007663,
+    "throughput_pts_per_sec": 62.9157116323183,
     "ari_by_phase": {
       "0": 0.34831974104885954,
       "1": 0.0037607326519637466,
@@ -364,6 +404,11 @@
         187
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.6173663364786325,
+    "ari_recent": 0.026423374501137027,
+    "nmi_recent": 0.12530320845118292,
+    "recent_window": 100,
     "regime": "spatial_drift",
     "family": "AdaptiveDStream",
     "n_cells_per_dim": null
@@ -376,8 +421,8 @@
     "purity": 0.698,
     "fraction_unassigned": 0.0,
     "peak_memory_bytes": 33416,
-    "elapsed_seconds": 0.06207369999901857,
-    "throughput_pts_per_sec": 8054.9411426724255,
+    "elapsed_seconds": 0.06292840000241995,
+    "throughput_pts_per_sec": 7945.53810331698,
     "ari_by_phase": {
       "0": 0.31847345429960455,
       "1": 0.5955735059387438,
@@ -405,6 +450,11 @@
         14
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.9110207708130726,
+    "ari_recent": 0.5311676637425994,
+    "nmi_recent": 0.5552875236572133,
+    "recent_window": 100,
     "regime": "spatial_drift",
     "family": "DenStream",
     "n_cells_per_dim": null
@@ -416,9 +466,9 @@
     "nmi": 0.15687876451372662,
     "purity": 0.78,
     "fraction_unassigned": 0.0,
-    "peak_memory_bytes": 98128,
-    "elapsed_seconds": 0.07476349998614751,
-    "throughput_pts_per_sec": 6687.7553898980395,
+    "peak_memory_bytes": 97336,
+    "elapsed_seconds": 0.07301429996732622,
+    "throughput_pts_per_sec": 6847.973619191708,
     "ari_by_phase": {
       "0": 0.08556297753273134,
       "1": 0.31433244280598627,
@@ -446,6 +496,11 @@
         50
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.8876240845682992,
+    "ari_recent": 0.5751871212758329,
+    "nmi_recent": 0.6683967207555396,
+    "recent_window": 100,
     "regime": "spatial_drift",
     "family": "CluStream",
     "n_cells_per_dim": null
@@ -457,9 +512,9 @@
     "nmi": 0.05151013265588422,
     "purity": 0.63,
     "fraction_unassigned": 0.0,
-    "peak_memory_bytes": 20056,
-    "elapsed_seconds": 0.040375099997618236,
-    "throughput_pts_per_sec": 12383.87025739863,
+    "peak_memory_bytes": 19640,
+    "elapsed_seconds": 0.042066399997565895,
+    "throughput_pts_per_sec": 11885.970751690938,
     "ari_by_phase": {
       "0": 0.47609666723518557,
       "1": 0.29112917012052963,
@@ -487,6 +542,11 @@
         7
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.751292894551751,
+    "ari_recent": 0.21427835135443057,
+    "nmi_recent": 0.3404490799027816,
+    "recent_window": 100,
     "regime": "spatial_drift",
     "family": "DBSTREAM",
     "n_cells_per_dim": null
@@ -498,9 +558,9 @@
     "nmi": 0.4163374093263787,
     "purity": 0.862,
     "fraction_unassigned": 0.12,
-    "peak_memory_bytes": 53016,
-    "elapsed_seconds": 0.6095188000035705,
-    "throughput_pts_per_sec": 820.3192419939649,
+    "peak_memory_bytes": 53184,
+    "elapsed_seconds": 0.5764653999940492,
+    "throughput_pts_per_sec": 867.3547449771685,
     "ari_by_phase": {
       "0": 0.45373782701967885,
       "1": 0.9323568360503268,
@@ -528,6 +588,11 @@
         64
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.685664485045467,
+    "ari_recent": 0.010955056591119098,
+    "nmi_recent": 0.05906784815511068,
+    "recent_window": 100,
     "regime": "density_drift",
     "family": "FixedGridDStream",
     "n_cells_per_dim": 8
@@ -539,9 +604,9 @@
     "nmi": 0.3724759082094941,
     "purity": 0.826,
     "fraction_unassigned": 0.668,
-    "peak_memory_bytes": 816136,
-    "elapsed_seconds": 2.4927277999959188,
-    "throughput_pts_per_sec": 200.58347325400658,
+    "peak_memory_bytes": 816280,
+    "elapsed_seconds": 2.5878244999912567,
+    "throughput_pts_per_sec": 193.21248407752896,
     "ari_by_phase": {
       "0": 0.6158887731869662,
       "1": 0.7063833733241264,
@@ -569,6 +634,11 @@
         1024
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.5967992623271037,
+    "ari_recent": -0.0002701889719163833,
+    "nmi_recent": 0.07350556465629147,
+    "recent_window": 100,
     "regime": "density_drift",
     "family": "FixedGridDStream",
     "n_cells_per_dim": 32
@@ -580,9 +650,9 @@
     "nmi": 0.1241013843943437,
     "purity": 0.692,
     "fraction_unassigned": 0.038,
-    "peak_memory_bytes": 187656,
-    "elapsed_seconds": 8.16103399998974,
-    "throughput_pts_per_sec": 61.266746346189535,
+    "peak_memory_bytes": 187784,
+    "elapsed_seconds": 8.415071499999613,
+    "throughput_pts_per_sec": 59.4172016244928,
     "ari_by_phase": {
       "0": 0.009694643814094262,
       "1": 0.4892224308123959,
@@ -610,6 +680,11 @@
         175
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.6370543744851804,
+    "ari_recent": 0.028747322420997617,
+    "nmi_recent": 0.13519124086990492,
+    "recent_window": 100,
     "regime": "density_drift",
     "family": "AdaptiveDStream",
     "n_cells_per_dim": null
@@ -622,8 +697,8 @@
     "purity": 0.904,
     "fraction_unassigned": 0.0,
     "peak_memory_bytes": 15984,
-    "elapsed_seconds": 0.02718450000975281,
-    "throughput_pts_per_sec": 18392.834145215773,
+    "elapsed_seconds": 0.029638900014106184,
+    "throughput_pts_per_sec": 16869.721877736105,
     "ari_by_phase": {
       "0": 0.28883878241262684,
       "1": 0.9290012423823732,
@@ -651,6 +726,11 @@
         6
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.9657441827287191,
+    "ari_recent": 0.7078593245586764,
+    "nmi_recent": 0.6734228032174183,
+    "recent_window": 100,
     "regime": "density_drift",
     "family": "DenStream",
     "n_cells_per_dim": null
@@ -662,9 +742,9 @@
     "nmi": 0.40118719979787565,
     "purity": 0.874,
     "fraction_unassigned": 0.0,
-    "peak_memory_bytes": 97536,
-    "elapsed_seconds": 0.09559150000859518,
-    "throughput_pts_per_sec": 5230.590585512751,
+    "peak_memory_bytes": 97608,
+    "elapsed_seconds": 0.10982410004362464,
+    "throughput_pts_per_sec": 4552.734780447903,
     "ari_by_phase": {
       "0": 0.08556297753273134,
       "1": 0.694399627923013,
@@ -692,6 +772,11 @@
         50
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.9010573543424913,
+    "ari_recent": 0.4387884939212547,
+    "nmi_recent": 0.49751477839176905,
+    "recent_window": 100,
     "regime": "density_drift",
     "family": "CluStream",
     "n_cells_per_dim": null
@@ -703,9 +788,9 @@
     "nmi": 0.4497890383030456,
     "purity": 0.964,
     "fraction_unassigned": 0.0,
-    "peak_memory_bytes": 17504,
-    "elapsed_seconds": 0.033267800012254156,
-    "throughput_pts_per_sec": 15029.548086011866,
+    "peak_memory_bytes": 17120,
+    "elapsed_seconds": 0.03896880004322156,
+    "throughput_pts_per_sec": 12830.777428235762,
     "ari_by_phase": {
       "0": 0.5040278112620475,
       "1": 0.7262173419913996,
@@ -733,6 +818,11 @@
         13
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.9501959218846929,
+    "ari_recent": 0.19016056873955883,
+    "nmi_recent": 0.3626768753092459,
+    "recent_window": 100,
     "regime": "density_drift",
     "family": "DBSTREAM",
     "n_cells_per_dim": null
@@ -745,8 +835,8 @@
     "purity": 0.872,
     "fraction_unassigned": 0.094,
     "peak_memory_bytes": 53248,
-    "elapsed_seconds": 0.5828312000085134,
-    "throughput_pts_per_sec": 857.8813213717737,
+    "elapsed_seconds": 0.7668659000191838,
+    "throughput_pts_per_sec": 652.0044769072299,
     "ari_by_phase": {
       "0": 0.6201411129553182,
       "1": 0.814363543858602,
@@ -774,6 +864,11 @@
         64
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.8663174882621484,
+    "ari_recent": 0.5432697136255786,
+    "nmi_recent": 0.5152336344972019,
+    "recent_window": 100,
     "regime": "two_gaussian_drift",
     "family": "FixedGridDStream",
     "n_cells_per_dim": 8
@@ -785,9 +880,9 @@
     "nmi": 0.09054257666444497,
     "purity": 0.574,
     "fraction_unassigned": 0.776,
-    "peak_memory_bytes": 816208,
-    "elapsed_seconds": 3.131430800000089,
-    "throughput_pts_per_sec": 159.67141921194164,
+    "peak_memory_bytes": 816352,
+    "elapsed_seconds": 3.529702600033488,
+    "throughput_pts_per_sec": 141.6549938216484,
     "ari_by_phase": {
       "0": 0.01790708842505162,
       "1": -0.0070134959278633285,
@@ -815,6 +910,11 @@
         1024
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.582893726451511,
+    "ari_recent": 0.004788638156240003,
+    "nmi_recent": 0.1223784563347569,
+    "recent_window": 100,
     "regime": "two_gaussian_drift",
     "family": "FixedGridDStream",
     "n_cells_per_dim": 32
@@ -827,8 +927,8 @@
     "purity": 0.716,
     "fraction_unassigned": 0.032,
     "peak_memory_bytes": 276928,
-    "elapsed_seconds": 14.634068200000911,
-    "throughput_pts_per_sec": 34.16684910624982,
+    "elapsed_seconds": 14.968915399978869,
+    "throughput_pts_per_sec": 33.40255366803034,
     "ari_by_phase": {
       "0": 0.14154841994099848,
       "1": 0.17725974316505394,
@@ -856,6 +956,11 @@
         256
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.8588686538755361,
+    "ari_recent": 0.2470915906605319,
+    "nmi_recent": 0.40549477034691156,
+    "recent_window": 100,
     "regime": "two_gaussian_drift",
     "family": "AdaptiveDStream",
     "n_cells_per_dim": null
@@ -868,8 +973,8 @@
     "purity": 0.95,
     "fraction_unassigned": 0.0,
     "peak_memory_bytes": 15480,
-    "elapsed_seconds": 0.03543450000870507,
-    "throughput_pts_per_sec": 14110.54198245119,
+    "elapsed_seconds": 0.03633480001008138,
+    "throughput_pts_per_sec": 13760.912399717929,
     "ari_by_phase": {
       "0": 0.3561669598680506,
       "1": 0.8043132909692854,
@@ -897,6 +1002,11 @@
         6
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.9932449656646712,
+    "ari_recent": 0.7504854535768907,
+    "nmi_recent": 0.7522562366707157,
+    "recent_window": 100,
     "regime": "two_gaussian_drift",
     "family": "DenStream",
     "n_cells_per_dim": null
@@ -908,9 +1018,9 @@
     "nmi": 0.42452323133531805,
     "purity": 0.88,
     "fraction_unassigned": 0.0,
-    "peak_memory_bytes": 97248,
-    "elapsed_seconds": 0.0851425000000745,
-    "throughput_pts_per_sec": 5872.507854474116,
+    "peak_memory_bytes": 97320,
+    "elapsed_seconds": 0.08404570003040135,
+    "throughput_pts_per_sec": 5949.14433241841,
     "ari_by_phase": {
       "0": 0.11005657552397047,
       "1": 0.8447611760916377,
@@ -938,6 +1048,11 @@
         50
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.9808354235785705,
+    "ari_recent": 0.9603851047994045,
+    "nmi_recent": 0.9426117969432113,
+    "recent_window": 100,
     "regime": "two_gaussian_drift",
     "family": "CluStream",
     "n_cells_per_dim": null
@@ -949,9 +1064,9 @@
     "nmi": 0.11696974487101215,
     "purity": 0.74,
     "fraction_unassigned": 0.0,
-    "peak_memory_bytes": 36904,
-    "elapsed_seconds": 0.1064872999995714,
-    "throughput_pts_per_sec": 4695.395601184483,
+    "peak_memory_bytes": 36976,
+    "elapsed_seconds": 0.10124940000241622,
+    "throughput_pts_per_sec": 4938.300868825573,
     "ari_by_phase": {
       "0": 0.2043291782963397,
       "1": 0.2357382603373859,
@@ -979,6 +1094,11 @@
         14
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.8122605094098048,
+    "ari_recent": 0.10617022525185926,
+    "nmi_recent": 0.25097551564998277,
+    "recent_window": 100,
     "regime": "two_gaussian_drift",
     "family": "DBSTREAM",
     "n_cells_per_dim": null
@@ -990,9 +1110,9 @@
     "nmi": 0.0077709646036730065,
     "purity": 0.548,
     "fraction_unassigned": 0.108,
-    "peak_memory_bytes": 53872,
-    "elapsed_seconds": 0.8320986999897286,
-    "throughput_pts_per_sec": 600.890254973565,
+    "peak_memory_bytes": 53880,
+    "elapsed_seconds": 0.827090400038287,
+    "throughput_pts_per_sec": 604.5288398666631,
     "ari_by_phase": {
       "0": 0.02412092643311933,
       "1": -0.004611846355975377,
@@ -1020,6 +1140,11 @@
         64
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.5191187946427285,
+    "ari_recent": -0.0004742989268986779,
+    "nmi_recent": 0.0030376578308336853,
+    "recent_window": 100,
     "regime": "moons_drift",
     "family": "FixedGridDStream",
     "n_cells_per_dim": 8
@@ -1031,9 +1156,9 @@
     "nmi": 0.034175471127406695,
     "purity": 0.534,
     "fraction_unassigned": 0.882,
-    "peak_memory_bytes": 829824,
-    "elapsed_seconds": 3.2746920000063255,
-    "throughput_pts_per_sec": 152.68611521298314,
+    "peak_memory_bytes": 830360,
+    "elapsed_seconds": 3.38699860003544,
+    "throughput_pts_per_sec": 147.6233264444716,
     "ari_by_phase": {
       "0": -0.00011466372657111356,
       "1": 0.0005179590691879744,
@@ -1061,6 +1186,11 @@
         1024
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.5532598352991982,
+    "ari_recent": -0.003438304728747968,
+    "nmi_recent": 0.08615364208299475,
+    "recent_window": 100,
     "regime": "moons_drift",
     "family": "FixedGridDStream",
     "n_cells_per_dim": 32
@@ -1072,9 +1202,9 @@
     "nmi": 0.02668297939859598,
     "purity": 0.578,
     "fraction_unassigned": 0.016,
-    "peak_memory_bytes": 266976,
-    "elapsed_seconds": 13.555485699995188,
-    "throughput_pts_per_sec": 36.8854359825836,
+    "peak_memory_bytes": 267048,
+    "elapsed_seconds": 15.886788000003435,
+    "throughput_pts_per_sec": 31.472692906828737,
     "ari_by_phase": {
       "0": 0.0,
       "1": 0.033080668511283697,
@@ -1102,6 +1232,11 @@
         247
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.6471531632779695,
+    "ari_recent": 0.039965636353873964,
+    "nmi_recent": 0.1295664308699656,
+    "recent_window": 100,
     "regime": "moons_drift",
     "family": "AdaptiveDStream",
     "n_cells_per_dim": null
@@ -1114,8 +1249,8 @@
     "purity": 0.752,
     "fraction_unassigned": 0.006,
     "peak_memory_bytes": 37792,
-    "elapsed_seconds": 0.11991910000506323,
-    "throughput_pts_per_sec": 4169.477589298861,
+    "elapsed_seconds": 0.13500090001616627,
+    "throughput_pts_per_sec": 3703.679012066774,
     "ari_by_phase": {
       "0": 0.04145082311491709,
       "1": 0.27038806819561995,
@@ -1143,6 +1278,11 @@
         16
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.9258979150023383,
+    "ari_recent": 0.25847855857791147,
+    "nmi_recent": 0.45930269848147987,
+    "recent_window": 100,
     "regime": "moons_drift",
     "family": "DenStream",
     "n_cells_per_dim": null
@@ -1154,9 +1294,9 @@
     "nmi": 0.15677119375502047,
     "purity": 0.74,
     "fraction_unassigned": 0.0,
-    "peak_memory_bytes": 99872,
-    "elapsed_seconds": 0.08923469998990186,
-    "throughput_pts_per_sec": 5603.2014458117965,
+    "peak_memory_bytes": 99080,
+    "elapsed_seconds": 0.10359029995743185,
+    "throughput_pts_per_sec": 4826.706749622927,
     "ari_by_phase": {
       "0": 0.04538866009121623,
       "1": 0.22737643705800745,
@@ -1184,6 +1324,11 @@
         50
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.8082963755543455,
+    "ari_recent": 0.48482628207545647,
+    "nmi_recent": 0.38517924935150794,
+    "recent_window": 100,
     "regime": "moons_drift",
     "family": "CluStream",
     "n_cells_per_dim": null
@@ -1195,9 +1340,9 @@
     "nmi": 0.04823716470849776,
     "purity": 0.65,
     "fraction_unassigned": 0.0,
-    "peak_memory_bytes": 29224,
-    "elapsed_seconds": 0.07294110000657383,
-    "throughput_pts_per_sec": 6854.845895591613,
+    "peak_memory_bytes": 29104,
+    "elapsed_seconds": 0.09681830002227798,
+    "throughput_pts_per_sec": 5164.312943781801,
     "ari_by_phase": {
       "0": 0.09276081475849374,
       "1": 0.03794910888011579,
@@ -1225,6 +1370,11 @@
         18
       ]
     ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.7390223082486895,
+    "ari_recent": 0.0938278849990249,
+    "nmi_recent": 0.23186549687037628,
+    "recent_window": 100,
     "regime": "moons_drift",
     "family": "DBSTREAM",
     "n_cells_per_dim": null

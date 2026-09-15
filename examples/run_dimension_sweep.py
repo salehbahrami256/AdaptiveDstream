@@ -70,6 +70,8 @@ N_SAMPLES = 400
 DIMS = [2, 3, 4, 5, 6, 8, 10, 12, 15, 20]
 CELL_BUDGET = 2500  # target total fixed-grid cells; matches AdaptiveDStream's max_cells below
 ADAPTIVE_MAX_CELLS = 2500
+# See run_frontier_sweep.py's EVAL_DECAY comment.
+EVAL_DECAY = 0.99
 # fixed_resolution_for_budget floors at n_cells_per_dim=2, so past the
 # dimension where 2**dim alone blows past CELL_BUDGET the "budget-matched"
 # design breaks down and the fixed grid instead pays 2**dim cells
@@ -109,21 +111,23 @@ def main() -> None:
         else:
             factory = lambda n=n_cells, kw=common: FixedGridDStream(
                 n_cells_per_dim=n, dense_threshold=2.0, sparse_threshold=0.3, **kw)
-            r = run_stream_eval(factory, X, y, phase=phase, name="FixedGrid(budget-matched)")
+            r = run_stream_eval(factory, X, y, phase=phase, name="FixedGrid(budget-matched)", eval_decay=EVAL_DECAY)
             results.append({**r.to_dict(), "family": "FixedGridDStream", "dim": dim,
                              "n_cells_per_dim": n_cells, "total_cells": total_cells})
             log.info(f"dim={dim:>2}  FixedGrid n={n_cells} ({total_cells} cells)  ARI={r.ari:.3f}  "
+                  f"ARI_recent={r.ari_recent:.3f}  decayed_purity={r.decayed_purity:.3f}  "
                   f"peak_mem={r.peak_memory_bytes/1024:.1f}KB  unassigned={r.fraction_unassigned:.2f}")
 
         adaptive_factory = lambda kw=common: AdaptiveDStream(
             dense_threshold=0.5, sparse_threshold=0.05, split_threshold=0.05,
             max_depth=7, max_cells=ADAPTIVE_MAX_CELLS, merge_threshold=0.01, merge_min_age=200, **kw)
-        r = run_stream_eval(adaptive_factory, X, y, phase=phase, name="AdaptiveDStream")
+        r = run_stream_eval(adaptive_factory, X, y, phase=phase, name="AdaptiveDStream", eval_decay=EVAL_DECAY)
         n_leaves = r.active_cells_over_time[-1][1]
         results.append({**r.to_dict(), "family": "AdaptiveDStream", "dim": dim,
                          "n_cells_per_dim": None, "total_cells": n_leaves})
         degenerate = " (never split past the root: 2**dim > max_cells)" if n_leaves == 1 else ""
         log.info(f"dim={dim:>2}  AdaptiveDStream               ARI={r.ari:.3f}  "
+              f"ARI_recent={r.ari_recent:.3f}  decayed_purity={r.decayed_purity:.3f}  "
               f"peak_mem={r.peak_memory_bytes/1024:.1f}KB  unassigned={r.fraction_unassigned:.2f}  "
               f"leaves={n_leaves}{degenerate}")
 
@@ -133,7 +137,7 @@ def main() -> None:
 
     series = [("AdaptiveDStream", "tab:red", "*", 12), ("FixedGrid(budget-matched)", "tab:blue", "o", 7)]
 
-    for metric, ylabel, fname, log in [
+    for metric, ylabel, fname, use_log_scale in [
         ("peak_memory_bytes", "Peak memory (bytes)", "dimension_sweep_memory.png", True),
         ("ari", "Adjusted Rand Index", "dimension_sweep_ari.png", False),
     ]:
@@ -144,7 +148,7 @@ def main() -> None:
                 continue
             ax.plot([r["dim"] for r in rows], [r[metric] for r in rows],
                     marker=marker, color=color, label=name, markersize=size)
-        if log:
+        if use_log_scale:
             ax.set_yscale("log")
         ax.set_xlabel("Dimension")
         ax.set_ylabel(ylabel)

@@ -52,22 +52,22 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {8.2}Accuracy--Memory Frontier in Two Dimensions}{11}{subsection.8.2}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Accuracy--memory frontier on the varying-density stream (2D, $n=2000$, seed 7). AdaptiveDStream is highlighted; it is dominated on ARI by the fixed-grid frontier at comparable memory and by DBSTREAM.}}{11}{table.1}\protected@file@percent }
 \newlabel{tab:frontier}{{1}{11}{Accuracy--memory frontier on the varying-density stream (2D, $n=2000$, seed 7). AdaptiveDStream is highlighted; it is dominated on ARI by the fixed-grid frontier at comparable memory and by DBSTREAM}{table.1}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces ARI (left) and NMI (right) versus peak memory for the fixed-grid frontier, the three imported baselines, and AdaptiveDStream.}}{11}{figure.1}\protected@file@percent }
-\newlabel{fig:frontier}{{1}{11}{ARI (left) and NMI (right) versus peak memory for the fixed-grid frontier, the three imported baselines, and AdaptiveDStream}{figure.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces ARI (left) and NMI (right) versus peak memory for the fixed-grid frontier, the three imported baselines, and AdaptiveDStream.}}{12}{figure.1}\protected@file@percent }
+\newlabel{fig:frontier}{{1}{12}{ARI (left) and NMI (right) versus peak memory for the fixed-grid frontier, the three imported baselines, and AdaptiveDStream}{figure.1}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {8.3}Root-Cause Analysis of the Accuracy Gap}{12}{subsection.8.3}\protected@file@percent }
 \newlabel{sec:root-cause}{{8.3}{12}{Root-Cause Analysis of the Accuracy Gap}{subsection.8.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.4}Split-Strategy Comparison}{12}{subsection.8.4}\protected@file@percent }
-\newlabel{sec:split-strategy}{{8.4}{12}{Split-Strategy Comparison}{subsection.8.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.4}Split-Strategy Comparison}{13}{subsection.8.4}\protected@file@percent }
+\newlabel{sec:split-strategy}{{8.4}{13}{Split-Strategy Comparison}{subsection.8.4}{}}
 \@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Split-strategy comparison, varying-density drifting stream ($n=800$, seed 7). Only \texttt  {split\_strategy} differs between the three AdaptiveDStream rows.}}{13}{table.2}\protected@file@percent }
 \newlabel{tab:splitstrategy}{{2}{13}{Split-strategy comparison, varying-density drifting stream ($n=800$, seed 7). Only \texttt {split\_strategy} differs between the three AdaptiveDStream rows}{table.2}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces ARI by model on the split-strategy comparison of Table~\ref {tab:splitstrategy}.}}{13}{figure.2}\protected@file@percent }
 \newlabel{fig:splitstrategy}{{2}{13}{ARI by model on the split-strategy comparison of Table~\ref {tab:splitstrategy}}{figure.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.5}Effect of Dimensionality}{13}{subsection.8.5}\protected@file@percent }
-\newlabel{sec:dim-sweep}{{8.5}{13}{Effect of Dimensionality}{subsection.8.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.5}Effect of Dimensionality}{14}{subsection.8.5}\protected@file@percent }
+\newlabel{sec:dim-sweep}{{8.5}{14}{Effect of Dimensionality}{subsection.8.5}{}}
 \@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Effect of dimensionality on peak memory and accuracy, at roughly matched memory budgets (varying-density stream, $n=400$, seed 7, single run per dimension).}}{14}{table.3}\protected@file@percent }
 \newlabel{tab:dimsweep}{{3}{14}{Effect of dimensionality on peak memory and accuracy, at roughly matched memory budgets (varying-density stream, $n=400$, seed 7, single run per dimension)}{table.3}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Peak memory (left) and ARI (right) versus dimension, comparing AdaptiveDStream against a fixed grid whose resolution is chosen to match its cell budget at each dimension.}}{14}{figure.3}\protected@file@percent }
-\newlabel{fig:dimsweep}{{3}{14}{Peak memory (left) and ARI (right) versus dimension, comparing AdaptiveDStream against a fixed grid whose resolution is chosen to match its cell budget at each dimension}{figure.3}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Peak memory (left) and ARI (right) versus dimension, comparing AdaptiveDStream against a fixed grid whose resolution is chosen to match its cell budget at each dimension.}}{15}{figure.3}\protected@file@percent }
+\newlabel{fig:dimsweep}{{3}{15}{Peak memory (left) and ARI (right) versus dimension, comparing AdaptiveDStream against a fixed grid whose resolution is chosen to match its cell budget at each dimension}{figure.3}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {8.6}Single-Cell Equidistribution Criteria Comparison}{15}{subsection.8.6}\protected@file@percent }
 \newlabel{sec:criteria-comparison}{{8.6}{15}{Single-Cell Equidistribution Criteria Comparison}{subsection.8.6}{}}
 \@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces ROC-AUC (uniform vs.\ shape), averaged over $d\in \{2,5,10,15,20\}$, $n=400$, $R=60$ repeats per cell. Bold marks the best criterion per shape.}}{16}{table.4}\protected@file@percent }
@@ -89,32 +89,40 @@
 \newlabel{sec:real-data}{{8.8}{19}{Real-Data Memory-Accuracy Frontier}{subsection.8.8}{}}
 \@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Best-of-family Adjusted Rand Index and peak memory, three real datasets, dim$=6$. Full sweep (all resolutions/budgets) in \texttt  {outputs/real\_frontier\_results.json}.}}{19}{table.6}\protected@file@percent }
 \newlabel{tab:real-frontier}{{6}{19}{Best-of-family Adjusted Rand Index and peak memory, three real datasets, dim$=6$. Full sweep (all resolutions/budgets) in \texttt {outputs/real\_frontier\_results.json}}{table.6}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Adjusted Rand Index vs.\ peak memory (log scale), three real datasets. Circles: \texttt  {FixedGridDStream} frontier. Stars: \texttt  {AdaptiveDStream} frontier. Squares: \texttt  {river} baselines.}}{19}{figure.7}\protected@file@percent }
-\newlabel{fig:real-frontier-ari}{{7}{19}{Adjusted Rand Index vs.\ peak memory (log scale), three real datasets. Circles: \texttt {FixedGridDStream} frontier. Stars: \texttt {AdaptiveDStream} frontier. Squares: \texttt {river} baselines}{figure.7}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Adjusted Rand Index vs.\ peak memory (log scale), three real datasets. Circles: \texttt  {FixedGridDStream} frontier. Stars: \texttt  {AdaptiveDStream} frontier. Squares: \texttt  {river} baselines.}}{20}{figure.7}\protected@file@percent }
+\newlabel{fig:real-frontier-ari}{{7}{20}{Adjusted Rand Index vs.\ peak memory (log scale), three real datasets. Circles: \texttt {FixedGridDStream} frontier. Stars: \texttt {AdaptiveDStream} frontier. Squares: \texttt {river} baselines}{figure.7}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Normalized Mutual Information vs.\ peak memory (log scale), three real datasets.}}{20}{figure.8}\protected@file@percent }
 \newlabel{fig:real-frontier-nmi}{{8}{20}{Normalized Mutual Information vs.\ peak memory (log scale), three real datasets}{figure.8}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.9}Summary of Findings}{20}{subsection.8.9}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {9}Discussion}{21}{section.9}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {10}Conclusion}{22}{section.10}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {A}Derivations for the Weyl and Random-Projection Criteria}{23}{appendix.A}\protected@file@percent }
-\newlabel{app:criteria-proofs}{{A}{23}{Derivations for the Weyl and Random-Projection Criteria}{appendix.A}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {A.1}Weyl Criterion}{23}{subsection.A.1}\protected@file@percent }
-\newlabel{prop:weyl-moments}{{1}{23}{Exact null moments}{proposition.1}{}}
-\newlabel{thm:weyl-chisq}{{1}{23}{Asymptotic calibration}{theorem.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.9}Recency-Weighted Re-Evaluation}{20}{subsection.8.9}\protected@file@percent }
+\newlabel{sec:recency-reeval}{{8.9}{20}{Recency-Weighted Re-Evaluation}{subsection.8.9}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces Flat vs.\ recency-weighted ARI, frontier sweep (varying-density stream, $n{=}2000$, seed 7, $\lambda _{\text  {eval}}=0.99$, window $=100$ points).}}{21}{table.7}\protected@file@percent }
+\newlabel{tab:frontier-recent}{{7}{21}{Flat vs.\ recency-weighted ARI, frontier sweep (varying-density stream, $n{=}2000$, seed 7, $\lambda _{\text {eval}}=0.99$, window $=100$ points)}{table.7}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Flat vs.\ recency-weighted ARI, frontier sweep.}}{21}{figure.9}\protected@file@percent }
+\newlabel{fig:frontier-recent}{{9}{21}{Flat vs.\ recency-weighted ARI, frontier sweep}{figure.9}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces \texttt  {AdaptiveDStream}: flat vs.\ recency-weighted ARI, by regime.}}{22}{figure.10}\protected@file@percent }
+\newlabel{fig:regime-recent}{{10}{22}{\texttt {AdaptiveDStream}: flat vs.\ recency-weighted ARI, by regime}{figure.10}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.10}Summary of Findings}{22}{subsection.8.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {9}Discussion}{23}{section.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {10}Conclusion}{24}{section.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {A}Derivations for the Weyl and Random-Projection Criteria}{25}{appendix.A}\protected@file@percent }
+\newlabel{app:criteria-proofs}{{A}{25}{Derivations for the Weyl and Random-Projection Criteria}{appendix.A}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.1}Weyl Criterion}{25}{subsection.A.1}\protected@file@percent }
+\newlabel{prop:weyl-moments}{{1}{25}{Exact null moments}{proposition.1}{}}
 \citation{Hoeffding1963}
 \bibstyle{plain}
 \bibcite{Aggarwal2003CluStream}{1}
 \bibcite{Aggarwal2007DataStreams}{2}
 \bibcite{Cao2006DenStream}{3}
+\newlabel{thm:weyl-chisq}{{1}{26}{Asymptotic calibration}{theorem.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.2}Random-Projection Criterion}{26}{subsection.A.2}\protected@file@percent }
+\newlabel{prop:proj-moments}{{2}{26}{Exact projected null moments}{proposition.2}{}}
+\newlabel{thm:hoeffding}{{2}{26}{Hoeffding, 1963~\cite {Hoeffding1963}}{theorem.2}{}}
+\newlabel{cor:proj-fpr}{{1}{26}{Finite-sample false-positive control}{corollary.1}{}}
 \bibcite{Chen2007DStream}{4}
 \bibcite{Ester1996DBSCAN}{5}
 \bibcite{Hahsler2016DBSTREAM}{6}
 \bibcite{Hyde2017CEDAS}{7}
 \bibcite{Wang1997STING}{8}
-\@writefile{toc}{\contentsline {subsection}{\numberline {A.2}Random-Projection Criterion}{24}{subsection.A.2}\protected@file@percent }
-\newlabel{prop:proj-moments}{{2}{24}{Exact projected null moments}{proposition.2}{}}
-\newlabel{thm:hoeffding}{{2}{24}{Hoeffding, 1963~\cite {Hoeffding1963}}{theorem.2}{}}
-\newlabel{cor:proj-fpr}{{1}{24}{Finite-sample false-positive control}{corollary.1}{}}
 \bibcite{Hassani2014HASTREAM}{9}
 \bibcite{Mansalis2018Evaluation}{10}
 \bibcite{Ghesmoune2020Review}{11}
@@ -128,4 +136,4 @@
 \bibcite{KDDCup1999}{19}
 \bibcite{Blackard1999Covtype}{20}
 \bibcite{Zhu2010StreamData}{21}
-\gdef \@abspage@last{25}
+\gdef \@abspage@last{28}

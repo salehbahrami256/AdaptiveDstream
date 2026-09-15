@@ -895,3 +895,167 @@ A companion "Tracking the 13-week plan" protocol was added to CLAUDE.md
 this session, codifying the audit-before-trust approach used above (don't
 take the plan artifact's own checkboxes as ground truth for repo state)
 so future sessions repeat this process instead of re-deriving it.
+
+================================================================
+17. RECENCY-WEIGHTED EVALUATION METRICS ADDED (2026-09-15, later same day)
+================================================================
+User objection (correct, with one factual correction applied): the flat
+ARI/NMI/purity in EvalResult weight every point in the stream equally
+regardless of arrival time, but AdaptiveDStream (and, it turns out,
+DenStream and DBSTREAM too -- checked baselines.py: DenStream has
+decaying_factor=0.02, DBSTREAM has fading_factor=0.01, both real exponential
+fading, contrary to the user's stated assumption that only this method
+decays) all maintain state that forgets old data on purpose. Only CluStream
+(windowed snapshots via time_window/time_gap) genuinely doesn't decay. So
+the precise issue isn't "AdaptiveDStream decays and nothing else does" --
+it's that the FLAT METRIC reflects none of any model's recency behavior,
+and three different models decay at three uncontrolled, non-comparable
+rates (0.02, 0.01, and AdaptiveDStream's 0.99, not even on the same scale
+without converting to effective sample size). A flat aggregate ARI/NMI
+silently assumes "every timestep matters equally forever" and isn't a
+neutral default just because it's the common one.
+
+IMPLEMENTED in src/adaptive_dstream/evaluation.py (additive, opt-in, fully
+backward compatible -- existing callers/scripts/outputs are unaffected):
+
+  - decayed_purity_score(y_true, y_pred, decay): a recency-weighted purity.
+    Point i (0-indexed, arrival order) gets weight decay**(n-1-i), so the
+    most recent point has weight 1 and older points fade at exactly the
+    rate GridCell.decay_to uses. Generalizes purity_score's per-cluster
+    "does the majority true label match" logic to weighted sums instead of
+    raw counts -- purity is a per-point statistic, so this is a direct,
+    unambiguous weighted plug-in with no subtlety.
+  - run_stream_eval(..., eval_decay: float | None = None): when provided,
+    additionally computes decayed_purity (as above) plus a WINDOWED
+    (not decay-weighted) ari_recent/nmi_recent -- plain, unmodified
+    sklearn adjusted_rand_score/normalized_mutual_info_score recomputed
+    over only the most recent recent_window = ceil(1/(1-eval_decay))
+    points, where that formula is the effective sample size of an
+    exponential fade at that rate (already established in sec. 8's decay
+    table). eval_decay is a single value fixed by the CALLER and applied
+    identically to every model in a sweep -- it does NOT read any
+    individual model's own internal decay/fading parameter. This is a
+    deliberate choice: the point is one controlled, external recency lens
+    applied uniformly, not a different (and then incomparable) window per
+    model.
+
+WHY ARI ITSELF ISN'T DECAY-WEIGHTED DIRECTLY (documented in
+decayed_purity_score's docstring, repeated here since it's the key design
+decision): ARI is defined via combinatorial counts over PAIRS of points,
+and its "adjusted for chance" correction assumes a specific null
+distribution over contingency tables (generalized hypergeometric) that
+changes once points carry unequal weights -- a naive weighted plug-in into
+the standard ARI formula would NOT have a correct chance-correction term
+under those weights, and deriving the correct one is a real, nontrivial
+extension (related literature: weighted/fuzzy Rand indices, e.g. Campello
+2007, but not a drop-in). Rather than risk shipping a subtly-wrong
+"decayed ARI," the windowed (not weighted) ari_recent/nmi_recent uses
+completely standard, trusted ARI/NMI math, just restricted to a
+recency-focused slice of the stream -- correct by construction, at the
+cost of a hard cutoff instead of a smooth fade. If a properly-derived
+decay-weighted ARI is wanted later, this is the place to pick that back up,
+not before working out the corrected chance-adjustment term.
+
+Smoke-tested (varying_density, n=500, seed=7, drift=True, AdaptiveDStream
+tuned config, eval_decay=0.99): flat ari=0.030 vs ari_recent=0.026 (close,
+this stream/config), decayed_purity=0.617 vs flat purity=0.608, window=100.
+Not yet run across the existing sweep scripts (frontier/regime/dimension/
+split-strategy) with eval_decay set -- doing so, and deciding what decay
+rate to standardize on across a sweep (the model's own decay? a fixed
+value independent of any model, e.g. matching river's baselines' rates?),
+is the natural next step before this shows up in README/paper tables.
+Tests added: tests/test_evaluation.py (decayed_purity_score toy examples +
+decay=1.0 reduces to flat purity_score; run_stream_eval eval_decay=None
+default leaves new fields None; eval_decay set populates recent_window via
+the ceil(1/(1-decay)) formula, not a hardcoded literal -- floating point
+makes e.g. 1/(1-0.9) evaluate to 10.000000000000002, ceil -> 11, not 10).
+Full suite (38 tests) passes.
+
+WIRED INTO ALL FOUR SWEEP SCRIPTS (same session, immediately after): user
+asked to actually run this, not just have it available. Added
+EVAL_DECAY = 0.99 (AdaptiveDStream's own `decay` in every one of these
+scripts' `common` configs) to run_frontier_sweep.py, run_regime_sweep.py,
+run_split_strategy_sweep.py, run_dimension_sweep.py, and passed
+eval_decay=EVAL_DECAY into every run_stream_eval call in all four. Also
+fixed a real, unrelated bug found while editing run_dimension_sweep.py: its
+final plotting loop `for metric, ylabel, fname, log in [...]` shadowed the
+module-level `log` logger with a boolean (the log-scale flag), so the
+script's last line, `log.info(f"\nWrote ...")`, would have raised
+AttributeError on `False.info(...)` -- renamed the loop variable to
+`use_log_scale`. (Not yet clear whether this ever actually fired in a
+prior run; the script's outputs/dimension_sweep_results.json and PNGs are
+still written correctly before that line, so a prior crash there, if it
+happened, would have been silent/easy to miss since the JSON/PNG outputs
+looked complete regardless.)
+
+RESULTS (all four re-run, 2026-09-15): the recency-weighted lens tells a
+materially different story than the flat one, but NOT uniformly in
+AdaptiveDStream's favor -- both directions are real findings, not just
+the favorable one.
+
+  Frontier sweep (varying_density, n=2000, seed=7) -- the gap NARROWS
+  but does NOT close: AdaptiveDStream flat ARI=0.066 -> ARI_recent=0.582
+  (a large jump), but at its own memory footprint (666KB, between
+  FixedGrid n=22 and n=32), those two neighbors score ARI_recent=0.842
+  and 1.000 respectively -- still clearly ahead. DBSTREAM (0.236->0.481)
+  and DenStream (0.092->0.397) also both jump substantially. So on this
+  specific stream, recency-weighting narrows every model's apparent
+  deficit somewhat (the early portion of a drifting 3-phase stream is
+  harder for everyone, before enough decayed mass has accumulated
+  anywhere), but the fixed-grid frontier's dominance over AdaptiveDStream,
+  documented throughout sec. 8/16 of this file, survives this lens too.
+
+  Regime sweep (5 regimes, n=500, seed=7) -- mixed, and in AdaptiveDStream's
+  favor more often than not: ARI -> ARI_recent moves from 0.123->0.214
+  (static_no_drift), 0.109->0.029 (density_drift, WORSE), 0.041->0.247
+  (two_gaussian_drift, a >6x jump), 0.004->0.040 (moons_drift), and
+  0.030->0.026 (spatial_drift, flat). Four of five regimes improve or
+  hold; density_drift is the one exception, and worth a specific note:
+  it's the regime where the dense cluster's spread is WIDENING over time
+  (dense_std_schedule=[0.15,0.15,1.1]), so the true "recent" ground truth
+  there is itself the hardest-to-resolve phase (a newly-diffuse cluster) --
+  ARI_recent getting worse there is arguably measuring something real about
+  that regime's difficulty, not a flaw in the metric.
+
+  Split-strategy sweep (n=800) and dimension sweep (n=400, dims 2-20):
+  same qualitative pattern as the frontier sweep -- ARI_recent is higher
+  than flat ARI for essentially every model (moment_based/equal_uniform/
+  point_mass alike, and both FixedGrid and AdaptiveDStream across
+  dimensions), consistent with "early-stream underperformance while decayed
+  mass accumulates" being a real, shared effect across models rather than
+  something specific to AdaptiveDStream. One dimension-sweep exception
+  worth flagging: dim=10 is the one dimension where AdaptiveDStream's flat
+  ARI (0.047) already slightly exceeds the fixed grid's (0.030), and
+  ARI_recent preserves that ordering (0.129 vs 0.082) rather than reversing
+  it -- for that one dimension the earlier "likely small-sample noise"
+  read (see sec. 16... actually this dimension-sweep number, not sec. 16's
+  regime-sweep one) gets a little more support from a second, independent
+  metric agreeing on the direction, though still just one seed.
+
+TAKEAWAY FOR THE PAPER, if/when this gets folded in (not yet done --
+README.md and latex/main.tex still report only the flat metrics as of this
+entry): recency-weighting is not a way to make the headline result
+disappear. It materially changes the regime-sweep story (AdaptiveDStream
+looks meaningfully better under a lens consistent with its own design
+assumption) but leaves the frontier-sweep story intact (still dominated by
+the fixed-grid frontier at matched memory, just by a smaller margin). Both
+should be reported side by side, not one instead of the other -- exactly
+the point of adding ari_recent/decayed_purity as an *additional* field
+rather than a replacement metric.
+
+FOLDED INTO README.md AND latex/main.tex (same session, immediately after):
+resolves the "NOT YET DONE" note above. README: new "### Recency-weighted
+metrics" subsection under Evaluation (methodology), new "## Recency-weighted
+results" section after Real-Data Memory-Accuracy Frontier and before Known
+limitations (all four experiments' flat-vs-recent numbers, two new figures:
+outputs/frontier_ari_flat_vs_recent.png, outputs/regime_sweep_ari_flat_vs_recent.png).
+Paper: matching methodology paragraph added to Evaluation Metrics (sec.
+\label{sec:results}'s subsection), new \subsection{Recency-Weighted
+Re-Evaluation} (\label{sec:recency-reeval}) inserted between Real-Data
+Memory-Accuracy Frontier and Summary of Findings, with the same two tables/
+figures as the README, plus two new sentences in Summary of Findings tying
+it back to the rest of the results. Figures copied to latex/figures/.
+Compiled clean: 28 pages, no undefined references, no multiply-defined
+labels (checked explicitly via grep on main.log, not just eyeballed).
+latex/output/adative_D_stream.pdf updated. Full test suite (38 tests)
+still passes -- this was a docs/tex-only change, no src/ edits at this step.
