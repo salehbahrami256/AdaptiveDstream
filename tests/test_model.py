@@ -110,9 +110,12 @@ def test_moment_based_split_conserves_total_mass_exactly():
     cell.s1 = np.array([12.0, 12.0])  # mean = (0.6, 0.6)
     cell.s2 = np.array([8.0, 8.0])    # variance = 8/20 - 0.6^2 = 0.04
     cell.raw_count = 20
+    original_s0 = cell.s0
     model._split(cell)
     assert len(cell.children) == 4
-    assert sum(c.s0 for c in cell.children) == pytest.approx(cell.s0, rel=1e-9)
+    # cell (now an internal node) has its own stats zeroed by _split; check
+    # conservation against the pre-split mass captured above instead.
+    assert sum(c.s0 for c in cell.children) == pytest.approx(original_s0, rel=1e-9)
 
 
 def test_contraction_merges_stale_split_back_into_leaf():

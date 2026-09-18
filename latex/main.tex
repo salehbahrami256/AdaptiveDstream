@@ -694,6 +694,16 @@ FixedGrid $n{=}45$  & 1581.4 & 0.822  & 0.978  & 0.996 \\
 \label{fig:frontier-recent}
 \end{figure}
 
+The same comparison plotted against memory, in the same form as the flat memory-accuracy frontier (Figure~\ref{fig:frontier}) rather than as a per-model bar chart, alongside it rather than in place of it:
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.48\textwidth]{figures/frontier_ari_recent_vs_memory.png}
+\includegraphics[width=0.48\textwidth]{figures/frontier_nmi_recent_vs_memory.png}
+\caption{Recency-weighted ARI and NMI vs.\ peak memory, frontier sweep ($\lambda_{\text{eval}}=0.99$).}
+\label{fig:frontier-recent-memory}
+\end{figure}
+
 \textbf{Regime sweep: mixed, and in \texttt{AdaptiveDStream}'s favor more often than not.} Figure~\ref{fig:regime-recent} shows ARI (flat) $\to$ ARI (recent) for \texttt{AdaptiveDStream} across the five regimes of Table~\ref{tab:regime-ari}: \texttt{static\_no\_drift} $0.123 \to 0.214$, \texttt{spatial\_drift} $0.030 \to 0.026$ (flat), \texttt{density\_drift} $0.109 \to 0.029$ (worse), \texttt{two\_gaussian\_drift} $0.041 \to 0.247$ (a $6\times$ jump), \texttt{moons\_drift} $0.004 \to 0.040$. Four of five regimes improve or hold. \texttt{density\_drift} is the one exception, and it is plausibly a real effect rather than a metric artifact: that regime's dense cluster is deliberately widening over time ($\sigma: 0.15 \to 0.15 \to 1.1$), so the most recent phase is also the hardest one to resolve — a lower \texttt{ari\_recent} there is arguably measuring genuine difficulty, not a flaw in the lens.
 
 \begin{figure}[h]

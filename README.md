@@ -307,6 +307,11 @@ All four synthetic sweeps above were re-run with `eval_decay=0.99` (see [Recency
 
 ![Flat vs. recency-weighted ARI, frontier sweep](outputs/frontier_ari_flat_vs_recent.png)
 
+The same comparison plotted against memory, in the same form as the headline frontier plots above (`outputs/frontier_ari_recent_vs_memory.png`, `outputs/frontier_nmi_recent_vs_memory.png`) rather than as a per-model bar chart — these sit alongside `frontier_{ari,nmi}_vs_memory.png`, not in place of them:
+
+![ARI (recency-weighted) vs. peak memory, frontier sweep](outputs/frontier_ari_recent_vs_memory.png)
+![NMI (recency-weighted) vs. peak memory, frontier sweep](outputs/frontier_nmi_recent_vs_memory.png)
+
 | Model | Peak memory | ARI | ARI (recent) | Decayed purity |
 |---|---:|---:|---:|---:|
 | FixedGrid n=2 | 10.0 KB | -0.001 | 0.000 | 0.542 |

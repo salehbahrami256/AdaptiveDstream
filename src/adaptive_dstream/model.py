@@ -123,19 +123,36 @@ class AdaptiveDStream:
         return out
 
     def _find_leaf(self, x: np.ndarray) -> GridCell:
-        if not self.root.contains(x):
-            # Unbounded distributions (e.g. Gaussian tails) will occasionally
-            # land outside any finite domain box; clip to the boundary and
-            # assign to the nearest edge cell rather than raising.
-            x = np.clip(x, self.lower, self.upper)
+        # GridCell.contains is half-open ([lower, upper) per axis) so that a
+        # point on a face shared by two sibling cells matches exactly one of
+        # them. That leaves exactly one point unrepresented by any leaf: the
+        # global upper corner of the whole domain itself (x == self.upper on
+        # some axis). Nudge the *search key* used to descend the tree
+        # infinitesimally below self.upper so it always falls inside the
+        # half-open rightmost cell; this never touches the actual point used
+        # to update statistics (x_clipped in partial_fit), only which leaf
+        # receives it.
+        search_key = np.clip(x, self.lower, self.upper)
+        search_key = np.where(
+            search_key >= self.upper, np.nextafter(self.upper, self.lower), search_key,
+        )
         node = self.root
         while not node.is_leaf:
-            hits = [c for c in node.children if c.contains(x)]
+            hits = [c for c in node.children if c.contains(search_key)]
             if hits:
                 node = hits[0]
             else:
+                # Should be unreachable given the nudge above; if it fires,
+                # it means floating-point error accumulated across repeated
+                # splits pushed search_key outside every child's bounds.
+                # Surface it instead of silently guessing.
+                log.warning(
+                    "t=%d _find_leaf: no child of level=%d center=%s contains search_key=%s "
+                    "(falling back to nearest child centre -- investigate float precision)",
+                    self.t, node.level, np.round(node.center, 6), np.round(search_key, 6),
+                )
                 centers = np.array([c.center for c in node.children])
-                node = node.children[int(np.argmin(np.linalg.norm(centers - x, axis=1)))]
+                node = node.children[int(np.argmin(np.linalg.norm(centers - search_key, axis=1)))]
         return node
 
     def partial_fit(self, x: np.ndarray, t: int | None = None) -> "AdaptiveDStream":
@@ -196,6 +213,14 @@ class AdaptiveDStream:
 
         cell.children = [child for _, child in entries]
         cell.split_time = self.t
+        # cell is now an internal node; its own stats are stale (they were
+        # the pre-split parent's) and unused by any is_leaf-gated code path,
+        # but leaving them set is a footgun for future code/debug logging
+        # that reads a node's stats without checking is_leaf first.
+        cell.s0 = 0.0
+        cell.s1 = np.zeros(self.dim)
+        cell.s2 = np.zeros(self.dim)
+        cell.raw_count = 0
 
     def _redistribute_equal_uniform(self, cell: GridCell, entries: list[tuple[np.ndarray, GridCell]]) -> None:
         # v0 strategy: historical mass is split equally among children and

@@ -49,7 +49,15 @@ class GridCell:
         return float(np.prod(self.side_lengths))
 
     def contains(self, x: np.ndarray) -> bool:
-        return bool(np.all(x >= self.lower) and np.all(x <= self.upper))
+        """Half-open on the upper side (``[lower, upper)`` per axis), so that
+        a point sitting exactly on the face shared by two sibling cells
+        matches exactly one of them instead of both. The one point this
+        excludes -- the global upper corner of the whole domain -- is
+        handled by the caller (``AdaptiveDStream._find_leaf``), which knows
+        the root's bounds and nudges the search key inward before
+        descending; ``contains`` itself has no way to distinguish an
+        internal split boundary from the outer domain edge."""
+        return bool(np.all(x >= self.lower) and np.all(x < self.upper))
 
     def decay_to(self, t: int, decay: float) -> None:
         if t < self.last_update:

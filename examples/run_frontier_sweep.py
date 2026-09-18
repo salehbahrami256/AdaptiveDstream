@@ -9,9 +9,11 @@ single global cell size cannot serve both well), evaluated against
   (DenStream, CluStream, DBSTREAM), imported rather than reimplemented.
 
 Run: python examples/run_frontier_sweep.py
-Outputs: outputs/frontier_results.json, outputs/frontier_ari_vs_memory.png,
-outputs/frontier_nmi_vs_memory.png, and the saved stream itself under
-data/varying_density_seed7.{npz,json}.
+Outputs: outputs/frontier_results.json, outputs/frontier_{ari,nmi}_vs_memory.png
+(flat), outputs/frontier_{ari,nmi}_recent_vs_memory.png (recency-weighted,
+same lens as the "Recency-weighted results" README section, but plotted
+against memory like the flat frontier rather than as a per-model bar
+comparison), and the saved stream itself under data/varying_density_seed7.{npz,json}.
 """
 from __future__ import annotations
 
@@ -124,7 +126,17 @@ def main() -> None:
     with open(OUTPUT_DIR / "frontier_results.json", "w") as f:
         json.dump(results, f, indent=2, default=lambda o: o.tolist() if hasattr(o, "tolist") else o)
 
-    for metric, ylabel in [("ari", "Adjusted Rand Index"), ("nmi", "Normalized Mutual Information")]:
+    # Recency-weighted frontier plots (ari_recent/nmi_recent vs. memory) sit
+    # alongside the flat ones below, not in place of them -- per
+    # research_notes.txt sec. 17, both lenses are real and tell different
+    # stories about the same frontier, so neither replaces the other.
+    metrics = [
+        ("ari", "Adjusted Rand Index", False),
+        ("nmi", "Normalized Mutual Information", False),
+        ("ari_recent", "Adjusted Rand Index (recency-weighted)", True),
+        ("nmi_recent", "Normalized Mutual Information (recency-weighted)", True),
+    ]
+    for metric, ylabel, is_recent in metrics:
         fig, ax = plt.subplots(figsize=(8, 5.5))
 
         grid_rows = sorted((r for r in results if r["family"] == "FixedGridDStream"),
@@ -148,14 +160,16 @@ def main() -> None:
         ax.set_xscale("log")
         ax.set_xlabel("Peak memory (bytes, log scale)")
         ax.set_ylabel(ylabel)
-        ax.set_title(f"{ylabel} vs. peak memory\nvarying-density drifting stream", fontsize=12)
+        stream_desc = f"varying-density drifting stream{' (recency-weighted, eval_decay=' + str(EVAL_DECAY) + ')' if is_recent else ''}"
+        ax.set_title(f"{ylabel} vs. peak memory\n{stream_desc}", fontsize=12)
         ax.legend(fontsize=8)
         ax.grid(alpha=0.3)
         fig.tight_layout()
         fig.savefig(OUTPUT_DIR / f"frontier_{metric}_vs_memory.png", dpi=150)
         plt.close(fig)
 
-    log.info(f"\nWrote {OUTPUT_DIR}/frontier_results.json and frontier_{{ari,nmi}}_vs_memory.png")
+    log.info(f"\nWrote {OUTPUT_DIR}/frontier_results.json and "
+             f"frontier_{{ari,nmi,ari_recent,nmi_recent}}_vs_memory.png")
 
 
 if __name__ == "__main__":
