@@ -18,11 +18,15 @@ class GridCell:
     children: list["GridCell"] = field(default_factory=list)
     cluster_id: Optional[int] = None
     split_time: Optional[int] = None
+    # Last time a point landed here (unlike last_update, which any decay_to call resets); drives idle pruning.
+    last_seen: Optional[int] = None
 
     def __post_init__(self) -> None:
         self.lower = np.asarray(self.lower, dtype=float)
         self.upper = np.asarray(self.upper, dtype=float)
         d = len(self.lower)
+        if self.last_seen is None:
+            self.last_seen = self.last_update
         if self.s1 is None:
             self.s1 = np.zeros(d, dtype=float)
         if self.s2 is None:
@@ -64,6 +68,7 @@ class GridCell:
 
     def update(self, x: np.ndarray, t: int, decay: float) -> None:
         self.decay_to(t, decay)
+        self.last_seen = t
         self.s0 += 1.0
         self.s1 += x
         self.s2 += x * x

@@ -1059,3 +1059,93 @@ Compiled clean: 28 pages, no undefined references, no multiply-defined
 labels (checked explicitly via grep on main.log, not just eyeballed).
 latex/output/adative_D_stream.pdf updated. Full test suite (38 tests)
 still passes -- this was a docs/tex-only change, no src/ edits at this step.
+
+================================================================
+18. P11 MINIMAL CORRECTNESS PASS (2026-09-19)
+================================================================
+Plan item p11, deliberately the simplest subset (user: "p11 is not
+important"). Done: (a) _split now zeroes the parent's s0/s1/s2/raw_count
+(history lives in the children; _merge_children rebuilds it), (b) tried turning the
+nearest-centre fallback in _find_leaf into an assertion and REVERTED it: the
+fallback is live code once pruning removes children (gaps), a test caught it. NOT done: half-open intervals in GridCell.contains -- it would shift
+results for points exactly on a cell midline, so it needs a rerun + paper
+sync and was skipped as not worth it. Test
+test_moment_based_split_conserves_total_mass_exactly updated to read the
+parent mass before the split. Re-ran run_frontier_sweep.py: ARI/NMI/purity
+identical to committed outputs; peak_memory/throughput differ by tracemalloc/
+machine noise (also for FixedGrid, which never splits), so outputs/ was
+restored to the committed version, no README/paper change. 38 tests pass
+(note: needs PYTHONPATH=src or `pip install -e .` in this .venv).
+
+P12 FINDING while reading the code: predict_point_cluster() calls
+_assign_clusters() (full O(L^2) face-adjacency + BFS) on EVERY call, i.e.
+once per point in the prequential eval -- this, not maintenance(), is the
+dominant cost. Plus _should_split calls leaves() (O(L)) per point.
+
+P12 PART 1 DONE (2026-09-19): AdaptiveDStream.n_leaves is a running counter
+(+2**d-1 in _split, -(k-1) in _merge_children, -removed (+1 if all children
+removed) in _prune_recursive; FixedGrid sets it at construction);
+_should_split and maintenance() use it instead of leaves(). Test asserts
+n_leaves == len(leaves()) after every point through split/merge/prune.
+frontier_results ARI/NMI/purity unchanged; outputs/ restored (only
+timing/memory noise).
+
+BUG FOUND (not fixed, results-affecting): _prune_recursive calls
+child.decay_to(t) BEFORE computing inactive = (t - child.last_update) >=
+idle_prune_after; decay_to sets last_update = t, so inactive is always False
+for idle_prune_after > 0 (default 300) -> pruning never fires in any
+experiment. Every "prune" in this file/README/paper is therefore only
+merge-driven contraction. Fix = read last_update before decay_to.
+
+================================================================
+19. IDLE-PRUNE FIX + CHECKPOINTED CLUSTERING; ALL EXPERIMENTS RE-RUN (2026-09-19)
+================================================================
+Plan items: p12 (performance pass), p11 (minimal, see 18). Three code changes:
+ 1. n_leaves running counter (p12 part 1) -- no behavior change.
+ 2. PRUNE BUG FIX. _prune_recursive's "idle" test used t - last_update, but
+    last_update is reset by every decay_to() call, including via
+    GridCell.state() inside _assign_clusters (which ran every predict), so
+    idle was always ~0 and pruning NEVER fired in any experiment before this
+    date. First attempted fix (read last_update before decay_to) was not
+    enough for the same reason; fixed with a dedicated GridCell.last_seen set
+    only in update() (max over children on merge). Consequence: pruning
+    leaves holes, so the nearest-centre fallback in _find_leaf is live code
+    (my p11 assertion was wrong and was reverted; a test caught it).
+ 3. CHECKPOINTED CLUSTERING (p12 part 2). predict_point_cluster no longer
+    calls _assign_clusters(); clustering runs in maintenance() every
+    maintenance_interval (=50) points. Children of a split inherit the
+    parent's cluster_id. cluster_cells()/summary() still recluster on demand.
+    Cost side: predictions are stale by up to 50 points and EVERYTHING is
+    unassigned before the first checkpoint (cold start), which mechanically
+    lowers ARI and raises fraction-unassigned for every grid model, most on
+    the 500-point streams (>=0.10 unassigned by construction).
+Speed: frontier sweep ~10 min -> 4 s; real-data sweep ~1h45m -> ~3 min.
+
+RESULTS (all six sweeps re-run; README + latex/main.tex updated, figures
+re-copied, paper recompiled 28pp). Effects of (2) and (3) were NOT separated.
+ - Frontier: AdaptiveDStream 666 KB/ARI 0.066/recent 0.582 -> 304 KB/0.050/
+   0.308. Still below FixedGrid n=16 (203 KB, .201) and n=22 (385 KB, .414);
+   conclusion (fixed-grid frontier dominates) unchanged, recency gap widened.
+ - Regimes (n=500): Adaptive ARI static .123->.084, spatial .030->.016,
+   density .109->.053, two_gauss .041->.057, moons .004->.015; memory 177-259
+   KB; unassigned .02-.05 -> .12-.14 (fixed grids +.03-.14 too: cold start).
+   FixedGrid n=32 spatial .764->.512 shows the size of the cold-start effect.
+ - Split strategies: equal_uniform and moment_based now tie (.033); point_mass
+   .020 worst. Under ari_recent moment_based (.310) < point_mass (.378), so the
+   flat ordering is weak evidence.
+ - Dimensions: memory story intact (7-24% of fixed grid); dim 8 ARI ratio now
+   52% (fixed grid itself fell .697->.441, cold start).
+ - Real data: Adaptive memory 2-4x lower at same max_cells (e.g. kddcup
+   max_cells=6000 5.6 MB -> 1.5 MB); best-ARI per dataset Adaptive .147/.034/
+   .002 vs fixed .085/.019/.062, still far below DenStream/CluStream (.39/.33,
+   .42). Degeneracy: dim 10 now ENDS with 1 leaf (was 3070; peak 3.6 MB, tree
+   collapsed via prune+contract). One-cell runs show ARI .074-.125 -- an
+   artifact (first 50 preds unassigned + time-correlated labels), was .001.
+   Treat as the null-model baseline for that metric.
+OPEN / SUGGESTED: (a) separate cluster_interval or early first checkpoint to
+shrink the cold start; (b) restore original n_samples (4000 etc.) now that
+runs are cheap -- would make cold start negligible; (c) re-measure the
+"retired parents" instrumented comparison (README/paper still cite pre-fix
+754/1005 vs 637/849 numbers, flagged as such); (d) p12's on-demand clustering
+is now done, p21 throughput table is a natural next item since throughput is
+no longer dominated by per-point clustering.

@@ -83,6 +83,8 @@ class AdaptiveDStream:
         if not (self.merge_threshold < self.split_threshold):
             raise ValueError("merge_threshold must be < split_threshold to avoid split/merge oscillation.")
         self.root = GridCell(self.lower, self.upper, level=0, last_update=0)
+        # Running leaf count, updated by _split/_merge_children/_prune_recursive; equals len(self.leaves()).
+        self.n_leaves = 1
         self.t = 0
         self.n_seen = 0
         log.info("constructed %s(dim=%d, dense_threshold=%s, sparse_threshold=%s, "
@@ -134,6 +136,7 @@ class AdaptiveDStream:
             if hits:
                 node = hits[0]
             else:
+                # Pruning removes idle+sparse leaf children, leaving gaps; snap to the nearest surviving child.
                 centers = np.array([c.center for c in node.children])
                 node = node.children[int(np.argmin(np.linalg.norm(centers - x, axis=1)))]
         return node
@@ -169,7 +172,7 @@ class AdaptiveDStream:
             return False
         if cell.raw_count < max(4, 2 * self.dim):
             return False
-        projected = len(self.leaves()) - 1 + (2 ** self.dim)
+        projected = self.n_leaves - 1 + (2 ** self.dim)
         if projected > self.max_cells:
             return False
         score = cell.refinement_score(self.alpha_var, self.alpha_mean)
@@ -196,6 +199,15 @@ class AdaptiveDStream:
 
         cell.children = [child for _, child in entries]
         cell.split_time = self.t
+        for child in cell.children:
+            # Clustering only refreshes at checkpoints; until then a refined region keeps its label.
+            child.cluster_id = cell.cluster_id
+        self.n_leaves += len(entries) - 1
+        # The parent's history now lives in its children; _merge_children rebuilds it on contraction.
+        cell.s0 = 0.0
+        cell.s1 = np.zeros(self.dim)
+        cell.s2 = np.zeros(self.dim)
+        cell.raw_count = 0
 
     def _redistribute_equal_uniform(self, cell: GridCell, entries: list[tuple[np.ndarray, GridCell]]) -> None:
         # v0 strategy: historical mass is split equally among children and
@@ -266,7 +278,7 @@ class AdaptiveDStream:
             child.raw_count = int(round(cell.raw_count * frac))
 
     def maintenance(self) -> None:
-        n_leaves_before = len(self.leaves())
+        n_leaves_before = self.n_leaves
         self._prune_recursive(self.root)
         self._contract_recursive(self.root)
         self._assign_clusters()
@@ -285,13 +297,17 @@ class AdaptiveDStream:
                 self._prune_recursive(child)
             if child.is_leaf:
                 child.decay_to(self.t, self.decay)
-                inactive = (self.t - child.last_update) >= self.idle_prune_after
+                inactive = (self.t - child.last_seen) >= self.idle_prune_after
                 sparse = child.s0 * self._volume_scale(child) < self.sparse_threshold
                 if inactive and sparse:
                     log.debug("t=%d prune idle+sparse leaf level=%d center=%s s0=%.4f",
                               self.t, child.level, np.round(child.center, 3), child.s0)
                     continue
             kept.append(child)
+        removed = len(node.children) - len(kept)
+        self.n_leaves -= removed
+        if not kept:
+            self.n_leaves += 1  # every child was pruned, so the node itself is now a leaf
         node.children = kept
 
     def _contract_recursive(self, node: GridCell) -> None:
@@ -332,6 +348,8 @@ class AdaptiveDStream:
         node.s2 = sum((c.s2 for c in children), start=np.zeros(self.dim))
         node.raw_count = sum(c.raw_count for c in children)
         node.last_update = self.t
+        node.last_seen = max(c.last_seen for c in children)
+        self.n_leaves -= len(children) - 1
         node.children = []
         node.split_time = None
 
@@ -407,7 +425,13 @@ class AdaptiveDStream:
         return [c for c in self.leaves() if c.cluster_id is not None]
 
     def predict_point_cluster(self, x: np.ndarray) -> int | None:
-        self._assign_clusters()
+        """Cluster id of the leaf containing ``x`` as of the last checkpoint.
+
+        Clustering is O(dense_cells^2), so it runs only inside ``maintenance()``
+        (every ``maintenance_interval`` points), never per prediction. Until the
+        first checkpoint every point is unassigned (``None``); call
+        ``cluster_cells()`` to force a fresh clustering.
+        """
         return self._find_leaf(np.asarray(x, dtype=float)).cluster_id
 
     def summary(self) -> dict:

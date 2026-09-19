@@ -41,6 +41,7 @@ class FixedGridDStream(AdaptiveDStream):
             hi = np.array([edges[j][idx[j] + 1] for j in range(self.dim)])
             children.append(GridCell(lo, hi, level=1, last_update=self.t))
         self.root.children = children
+        self.n_leaves = len(children)
         # Row-major flat index -> cell, matching itertools.product's
         # iteration order above. Kept as our own reference (not derived from
         # leaves(), whose stack-based traversal order is reversed) so

@@ -259,7 +259,7 @@ A cell $g$ is pruned if
 \[
 D(g,t) < \tau_{\text{sparse}},
 \]
-and it has not received new points for a sufficiently long time.
+and it has not received new points for a sufficiently long time. ``Not received new points'' is measured from a per-cell last-arrival timestamp that only a point landing in the cell updates; an earlier implementation measured it from the last decay update, which every clustering pass resets, so pruning silently never fired. A point that later falls in a pruned region is assigned to the nearest surviving sibling cell.
 
 This pruning mechanism reduces memory usage and allows the algorithm to focus on active dense regions of the stream.
 
@@ -377,7 +377,7 @@ This section reports results from a research prototype of the proposed method, i
 
 \subsection{Experimental Setup}
 
-We use a synthetic two-dimensional stream, \texttt{varying\_density} (seed 7, $n=2000$ points\footnote{Reduced from $n=4000$ in the previous version of this evaluation: contraction and the transitional-cell assignment pass both add per-point cost on top of the already-present $O(\text{dense}^2)$ clustering-adjacency check that \texttt{predict\_point\_cluster} pays on every point, not only every maintenance interval, and the harness's \texttt{tracemalloc} instrumentation multiplies that further ($\approx 6\times$ overhead observed during recalibration). $n=4000$ stopped being practical to reproduce on demand; $n=2000$ keeps the same stream and resolution sweep while remaining tractable. The qualitative pattern below is corroborated independently by the regime sweep (Section~\ref{sec:regime-sweep}) at its own, separately-reduced sample size.}), constructed so that a single fixed grid resolution provably cannot represent both clusters well: a tight, dense Gaussian cluster ($\sigma = 0.18$) and a broad, sparse Gaussian cluster ($\sigma = 1.6$) are present simultaneously throughout the stream, with both centers drifting across three phases. Models are evaluated prequentially, that is, each incoming point is scored against the model's current state before the model is updated on it.
+We use a synthetic two-dimensional stream, \texttt{varying\_density} (seed 7, $n=2000$ points\footnote{Reduced from $n=4000$ in the previous version of this evaluation: at the time, \texttt{predict\_point\_cluster} re-ran the $O(\text{dense}^2)$ clustering-adjacency check on every point, and the harness's \texttt{tracemalloc} instrumentation multiplied that further, so $n=4000$ stopped being practical to reproduce. Clustering now runs only at maintenance checkpoints and the sweep takes seconds, but $n=2000$ was kept so results remain comparable; a full-scale $n=4000$ re-run is now cheap and remains the more rigorous version of this comparison. The qualitative pattern below is corroborated independently by the regime sweep (Section~\ref{sec:regime-sweep}) at its own, separately-reduced sample size.}), constructed so that a single fixed grid resolution provably cannot represent both clusters well: a tight, dense Gaussian cluster ($\sigma = 0.18$) and a broad, sparse Gaussian cluster ($\sigma = 1.6$) are present simultaneously throughout the stream, with both centers drifting across three phases. Models are evaluated prequentially, that is, each incoming point is scored against the model's current state before the model is updated on it.
 
 The reference frontier is a fixed-resolution D-Stream swept over ten grid resolutions, $n_{\text{cells per dim}} \in \{2,3,4,6,8,11,16,22,32,45\}$, tracing out an accuracy-versus-memory curve rather than a single operating point. We additionally import three published stream clustering methods from the \texttt{river} library, DenStream, CluStream, and DBSTREAM, without modification, so that the adaptive method is compared against real published baselines and not only against a self-authored fixed-grid ablation. Peak memory is measured with \texttt{tracemalloc} from before model construction, so that a fixed grid's upfront cell allocation is counted rather than only the cost of the online update phase. Points that fall in a non-dense cell with no dense neighbor are assigned a sentinel label rather than being dropped, so that a model which abstains on much of the stream is not rewarded for doing so. Unless noted otherwise, \texttt{AdaptiveDStream} below uses contraction ($\tau_{\text{merge}}=0.01$, merge-eligible only once a split is at least $200$ points old) and the default \texttt{equal\_uniform} split strategy; Section~\ref{sec:split-strategy} compares all three strategies directly.
 
@@ -385,28 +385,30 @@ The reference frontier is a fixed-resolution D-Stream swept over ten grid resolu
 
 Table~\ref{tab:frontier} reports peak memory, Adjusted Rand Index (ARI), Normalized Mutual Information (NMI), and the fraction of unassigned points for the fixed-grid frontier, the three imported baselines, and the adaptive method. Figure~\ref{fig:frontier} plots ARI and NMI against peak memory for all models.
 
+\textbf{Two changes to the implementation since the previous version of these numbers, and how to read them.} (1) Idle pruning now actually prunes: a bug meant \texttt{idle\_prune\_after} never triggered (the idle test compared against a timestamp that every decay update had just reset), so the adaptive method never released idle leaves; it now tracks the last time a point landed in each cell separately. (2) Clustering now runs at checkpoints, every \texttt{maintenance\_interval}$=50$ points, rather than on every prediction. Change (2) has a cold-start cost shared by every grid model: the first 50 predictions are always unassigned, so fraction unassigned and ARI are depressed by an amount that is large on the 500-point sweeps ($\geq 0.10$ of unassigned mass by construction) and small on the 2000-point stream. Differences from earlier tables are the sum of both changes and were not separated experimentally.
+
 \begin{table}[h]
 \centering
-\caption{Accuracy--memory frontier on the varying-density stream (2D, $n=2000$, seed 7). AdaptiveDStream is highlighted; it is dominated on ARI by the fixed-grid frontier at comparable memory and by DBSTREAM.}
+\caption{Accuracy--memory frontier on the varying-density stream (2D, $n=2000$, seed 7). AdaptiveDStream is highlighted; it is dominated on ARI by the fixed-grid frontier at comparable memory and by DBSTREAM. Clustering runs at checkpoints (every 50 points) and idle pruning is active.}
 \label{tab:frontier}
 \begin{tabular}{lrrrr}
 \toprule
 Model & Peak memory (KB) & ARI & NMI & Frac.\ unassigned \\
 \midrule
-FixedGrid $n{=}2$   & 7.4    & -0.001 & 0.014 & 0.00 \\
-FixedGrid $n{=}3$   & 11.2   & 0.001  & 0.002 & 0.01 \\
-FixedGrid $n{=}4$   & 16.4   & 0.001  & 0.021 & 0.01 \\
-DBSTREAM            & 23.2   & 0.236  & 0.221 & 0.00 \\
-FixedGrid $n{=}6$   & 31.8   & 0.004  & 0.042 & 0.03 \\
-DenStream           & 47.9   & 0.092  & 0.202 & 0.00 \\
-FixedGrid $n{=}8$   & 53.0   & 0.064  & 0.200 & 0.04 \\
-FixedGrid $n{=}11$  & 96.2   & 0.029  & 0.080 & 0.10 \\
-CluStream           & 99.6   & 0.061  & 0.084 & 0.00 \\
-FixedGrid $n{=}16$  & 199.4  & 0.203  & 0.205 & 0.27 \\
-FixedGrid $n{=}22$  & 378.0  & 0.442  & 0.403 & 0.42 \\
-\textbf{AdaptiveDStream} & \textbf{666.4} & \textbf{0.066} & \textbf{0.078} & \textbf{0.21} \\
-FixedGrid $n{=}32$  & 798.6  & 0.692  & 0.627 & 0.48 \\
-FixedGrid $n{=}45$  & 1581.3 & 0.822  & 0.739 & 0.51 \\
+FixedGrid $n{=}2$ & 12.0 & -0.001 & 0.013 & 0.03 \\
+FixedGrid $n{=}3$ & 15.7 & 0.001 & 0.001 & 0.03 \\
+FixedGrid $n{=}4$ & 20.2 & 0.001 & 0.009 & 0.04 \\
+DBSTREAM & 22.8 & 0.236 & 0.221 & 0.00 \\
+FixedGrid $n{=}6$ & 35.3 & 0.004 & 0.026 & 0.05 \\
+DenStream & 47.8 & 0.092 & 0.202 & 0.00 \\
+FixedGrid $n{=}8$ & 56.2 & 0.062 & 0.168 & 0.07 \\
+FixedGrid $n{=}11$ & 99.0 & 0.023 & 0.058 & 0.12 \\
+CluStream & 99.0 & 0.061 & 0.084 & 0.00 \\
+FixedGrid $n{=}16$ & 203.2 & 0.201 & 0.185 & 0.29 \\
+\textbf{AdaptiveDStream} & \textbf{304.3} & \textbf{0.050} & \textbf{0.090} & \textbf{0.19} \\
+FixedGrid $n{=}22$ & 385.1 & 0.414 & 0.356 & 0.44 \\
+FixedGrid $n{=}32$ & 814.1 & 0.669 & 0.594 & 0.50 \\
+FixedGrid $n{=}45$ & 1609.1 & 0.796 & 0.725 & 0.53 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -419,7 +421,7 @@ FixedGrid $n{=}45$  & 1581.3 & 0.822  & 0.739 & 0.51 \\
 \label{fig:frontier}
 \end{figure}
 
-At its own memory footprint (666 KB, between the fixed grids at $n{=}22$ and $n{=}32$), the fixed-grid frontier reaches ARI 0.44--0.69, versus 0.066 for the adaptive method; DBSTREAM reaches higher ARI still (0.236) using roughly 30 times less memory (23~KB). Relative to the previous version of this evaluation (Table~\ref{tab:frontier}, $n=4000$: 1344~KB, ARI 0.106, 42\% unassigned), two things changed and one did not. Peak memory roughly halved in proportion to the smaller sample, and \textbf{fraction unassigned dropped from 0.42 to 0.21} — a direct, measurable effect of the transitional-cell border-assignment rule, which no longer leaves every non-dense leaf's points unlabeled. ARI did not improve: 0.066 here is, if anything, slightly below the earlier run's 0.106. The same pattern, substantial memory and unassigned-fraction gains with no corresponding ARI gain, repeats independently in the regime sweep (Section~\ref{sec:regime-sweep}), which is evidence this is a real effect of the new features and not sampling noise from the smaller $n$.
+With idle pruning active, \texttt{AdaptiveDStream}'s peak memory falls from 666~KB to 304~KB (from 1344~KB in the original $n=4000$ run), placing it between FixedGrid $n{=}16$ (203~KB, ARI 0.201) and $n{=}22$ (385~KB, ARI 0.414). Its own ARI is 0.050 (previously 0.066), below both neighbors and far below FixedGrid $n{=}32$ and $n{=}45$ (0.669 and 0.796); DBSTREAM reaches 0.236 with roughly 13 times less memory (23~KB). Fraction unassigned is 0.19 (previously 0.21, and 0.42 before transitional-cell assignment). The frontier conclusion is therefore unchanged: at every memory budget a fixed grid or an imported baseline is at least as accurate. The same pattern, memory and unassigned-fraction gains without a corresponding ARI gain, recurs in the regime sweep (Section~\ref{sec:regime-sweep}).
 
 \subsection{Root-Cause Analysis of the Accuracy Gap}
 \label{sec:root-cause}
@@ -428,7 +430,7 @@ We traced the original gap to two specific, verified implementation issues, both
 
 \begin{enumerate}
     \item \textbf{The dense threshold is an absolute decayed count, not a density — unchanged by this iteration.} Splitting a cell fragments its accumulated mass across its $2^d$ children. A region can be genuinely dense, that is, have high mass per unit volume, while every fine cell covering it holds too little raw decayed count to cross $\tau_{\text{dense}}$, simply because the same mass is now divided among more cells. Consequently no single absolute threshold value is correct both before and after a region is refined. We originally verified this is the dominant effect by manually sweeping the threshold pair from $(\tau_{\text{dense}}, \tau_{\text{sparse}}) = (2.0, 0.3)$, the value shared with the fixed-grid baseline, down to $(0.5, 0.05)$: ARI improved from 0.040 to only about 0.106 before plateauing, never approaching the fixed-grid frontier. None of contraction, transitional assignment, or the choice of split strategy (Section~\ref{sec:split-strategy}) changes how $\tau_{\text{dense}}$ and $\tau_{\text{sparse}}$ are compared against $D(g,t)$, so this remains the top open item.
-    \item \textbf{Splitting still does not fully free the parent cell's storage — contraction now reclaims some of it, quantifiably.} The split operation attaches $2^d$ children to a cell but leaves the parent object itself resident in memory, still holding its sufficient statistics, unless the children later satisfy the contraction criterion and are merged back. A direct, instrumented comparison on the same stream and configuration as Table~\ref{tab:frontier}: \emph{without} contraction, the run ends with 754 leaf cells and 1005 total live cell objects (251 retired parents, $\approx 25\%$ dead weight, matching the original finding almost exactly); \emph{with} contraction enabled, it ends with 637 leaf cells and 849 total objects (212 retired parents), a real $\approx 15\%$ reduction in total live cells. Contraction does not eliminate the issue, though: a cell whose children keep legitimately deviating from the locally-uniform assumption, that is, a real, persistent cluster, never satisfies the merge criterion, and its stale parent remains resident indefinitely, exactly as before.
+    \item \textbf{Splitting still does not fully free the parent cell's storage — contraction now reclaims some of it, quantifiably.} The split operation attaches $2^d$ children to a cell but leaves the parent object itself resident in memory, still holding its sufficient statistics, unless the children later satisfy the contraction criterion and are merged back. A direct, instrumented comparison on the same stream and configuration as Table~\ref{tab:frontier} (measured before the idle-pruning fix described above, and not repeated since): \emph{without} contraction, the run ends with 754 leaf cells and 1005 total live cell objects (251 retired parents, $\approx 25\%$ dead weight, matching the original finding almost exactly); \emph{with} contraction enabled, it ends with 637 leaf cells and 849 total objects (212 retired parents), a real $\approx 15\%$ reduction in total live cells. Contraction does not eliminate the issue, though: a cell whose children keep legitimately deviating from the locally-uniform assumption, that is, a real, persistent cluster, never satisfies the merge criterion, and its stale parent remains resident indefinitely, exactly as before.
 \end{enumerate}
 
 Both issues point toward the same fix as before: making the dense/sparse classification resolution-aware. Memory accounting is now partially, though not fully, addressed by contraction.
@@ -446,14 +448,14 @@ A split has to infer how to redistribute a parent's decayed mass across its $2^d
 \toprule
 Model & Peak memory (KB) & ARI & NMI & Frac.\ unassigned \\
 \midrule
-DBSTREAM                            & 22.3  & 0.019 & 0.048 & 0.00 \\
-FixedGrid $n{=}8$                   & 55.7  & 0.052 & 0.172 & 0.08 \\
-DenStream                           & 40.2  & 0.062 & 0.155 & 0.00 \\
-CluStream                           & 98.9  & 0.112 & 0.118 & 0.00 \\
-\textbf{AdaptiveDStream} (\texttt{equal\_uniform}) & 315.6 & \textbf{0.024} & 0.084 & 0.07 \\
-\textbf{AdaptiveDStream} (\texttt{moment\_based})  & 391.4 & \textbf{0.021} & 0.066 & 0.10 \\
-\textbf{AdaptiveDStream} (\texttt{point\_mass})    & 447.2 & \textbf{0.017} & 0.037 & 0.34 \\
-FixedGrid $n{=}32$                  & 797.8 & 0.667 & 0.594 & 0.53 \\
+DBSTREAM & 21.8 & 0.019 & 0.048 & 0.00 \\
+FixedGrid $n{=}8$ & 59.1 & 0.043 & 0.111 & 0.12 \\
+DenStream & 40.2 & 0.062 & 0.155 & 0.00 \\
+CluStream & 98.1 & 0.112 & 0.118 & 0.00 \\
+\textbf{AdaptiveDStream} (\texttt{equal\_uniform}) & 258.7 & \textbf{0.033} & 0.090 & 0.12 \\
+\textbf{AdaptiveDStream} (\texttt{moment\_based}) & 326.0 & \textbf{0.033} & 0.081 & 0.16 \\
+\textbf{AdaptiveDStream} (\texttt{point\_mass}) & 356.6 & \textbf{0.020} & 0.066 & 0.38 \\
+FixedGrid $n{=}32$ & 811.0 & 0.504 & 0.474 & 0.58 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -465,7 +467,7 @@ FixedGrid $n{=}32$                  & 797.8 & 0.667 & 0.594 & 0.53 \\
 \label{fig:splitstrategy}
 \end{figure}
 
-\texttt{equal\_uniform}, the simplest strategy, is narrowly the best of the three on this stream, and \texttt{point\_mass} is clearly the worst, for an explainable reason: it hands each split's entire mass to one child and leaves the other $2^d-1$ at exactly zero, so those children stay \texttt{sparse} until real new data arrives, inflating fraction unassigned to $0.34$ (3--5$\times$ the other two strategies) while also using the most memory of the three, since an empty child is still a live \texttt{GridCell} object. \texttt{moment\_based} sits in between, as intended: it spreads mass more realistically than \texttt{point\_mass} (verified separately by an exact mass-conservation test) but still concentrates most of it near the tracked mean, costing it slightly against \texttt{equal\_uniform}'s even split on this particular stream. None of the three strategies brings \texttt{AdaptiveDStream} close to the fixed-grid or \texttt{river} baselines: this experiment isolates the split-mass-redistribution question specifically, and the answer is that it is not where the current ARI gap originates, consistent with Section~\ref{sec:root-cause}.
+\texttt{equal\_uniform} and \texttt{moment\_based} now tie on ARI (0.033 each), and \texttt{point\_mass} is clearly the worst, for an explainable reason. (Previously \texttt{equal\_uniform} was narrowly ahead, 0.024 against 0.021, a difference that did not survive the implementation changes above and was within noise at this sample size.) \texttt{equal\_uniform} remains the cheaper of the two (259~KB vs.\ 326~KB) with lower fraction unassigned (0.12 vs.\ 0.16). \texttt{point\_mass} hands each split's entire mass to one child and leaves the other $2^d-1$ at exactly zero, so those children stay \texttt{sparse} until real new data arrives, inflating fraction unassigned to $0.38$ (2--3$\times$ the other two strategies) while also using the most memory of the three, since an empty child is still a live \texttt{GridCell} object. \texttt{moment\_based} spreads mass more realistically than \texttt{point\_mass} (verified separately by an exact mass-conservation test), but that does not translate into a measurable ARI gain over the even split on this stream. None of the three strategies brings \texttt{AdaptiveDStream} close to the fixed-grid or \texttt{river} baselines: this experiment isolates the split-mass-redistribution question specifically, and the answer is that it is not where the current ARI gap originates, consistent with Section~\ref{sec:root-cause}.
 
 \subsection{Effect of Dimensionality}
 \label{sec:dim-sweep}
@@ -481,26 +483,26 @@ We repeated the comparison on the same stream family generalized to $d > 2$, wit
 \toprule
 Dim & Model & Cells & Peak memory (KB) & ARI & NMI \\
 \midrule
-2  & FixedGrid ($n{=}50$) & 2500 & 1949.8 & 0.604 & 0.574 \\
-2  & \textbf{AdaptiveDStream} & 136  & \textbf{143.0}  & 0.021 & 0.099 \\
-3  & FixedGrid ($n{=}14$) & 2744 & 2221.4 & 0.471 & 0.460 \\
-3  & \textbf{AdaptiveDStream} & 225  & \textbf{210.1}  & 0.000 & 0.038 \\
-4  & FixedGrid ($n{=}7$)  & 2401 & 2019.8 & 0.497 & 0.464 \\
-4  & \textbf{AdaptiveDStream} & 466  & \textbf{418.5}  & 0.000 & 0.030 \\
-5  & FixedGrid ($n{=}5$)  & 3125 & 2724.6 & 0.523 & 0.466 \\
-5  & \textbf{AdaptiveDStream} & 714  & \textbf{642.5}  & -0.002 & 0.034 \\
-6  & FixedGrid ($n{=}4$)  & 4096 & 3711.0 & 0.705 & 0.599 \\
-6  & \textbf{AdaptiveDStream} & 946  & \textbf{868.5}  & 0.065 & 0.156 \\
-8  & FixedGrid ($n{=}3$)  & 6561 & 6334.4 & 0.697 & 0.618 \\
-8  & \textbf{AdaptiveDStream} & 1531 & \textbf{1499.6} & 0.239 & 0.212 \\
-10 & FixedGrid ($n{=}2$)  & 1024 & 1053.5 & 0.030 & 0.159 \\
-10 & \textbf{AdaptiveDStream} & 1024 & \textbf{1272.8} & 0.047 & 0.116 \\
-12 & FixedGrid ($n{=}2$)  & 4096  & 4465.9  & 0.393  & 0.405 \\
-12 & \textbf{AdaptiveDStream} & \textbf{1}  & \textbf{2.5}  & 0.000  & 0.005 \\
-15 & FixedGrid ($n{=}2$)  & 32768 & 38833.3 & 0.029  & 0.121 \\
-15 & \textbf{AdaptiveDStream} & \textbf{1}  & \textbf{2.5}  & -0.000 & 0.005 \\
-20 & FixedGrid ($n{=}2$)  & \multicolumn{4}{c}{skipped: $2^{20}$ cells exceeds the shared-budget comparison's validity} \\
-20 & \textbf{AdaptiveDStream} & \textbf{1}  & \textbf{2.6}  & -0.000 & 0.005 \\
+2 & FixedGrid ($n{=}50$) & 2500 & 1971.8 & 0.304 & 0.362 \\
+2 & \textbf{AdaptiveDStream} & 136 & \textbf{143.9} & 0.019 & 0.035 \\
+3 & FixedGrid ($n{=}14$) & 2744 & 2243.1 & 0.288 & 0.315 \\
+3 & \textbf{AdaptiveDStream} & 225 & \textbf{211.5} & 0.001 & 0.005 \\
+4 & FixedGrid ($n{=}7$) & 2401 & 2038.6 & 0.363 & 0.350 \\
+4 & \textbf{AdaptiveDStream} & 466 & \textbf{421.7} & 0.004 & 0.016 \\
+5 & FixedGrid ($n{=}5$) & 3125 & 2749.0 & 0.335 & 0.321 \\
+5 & \textbf{AdaptiveDStream} & 714 & \textbf{647.5} & -0.002 & 0.005 \\
+6 & FixedGrid ($n{=}4$) & 4096 & 3730.5 & 0.482 & 0.394 \\
+6 & \textbf{AdaptiveDStream} & 946 & \textbf{874.3} & 0.071 & 0.073 \\
+8 & FixedGrid ($n{=}3$) & 6561 & 6385.8 & 0.441 & 0.351 \\
+8 & \textbf{AdaptiveDStream} & 1531 & \textbf{1510.8} & 0.229 & 0.171 \\
+10 & FixedGrid ($n{=}2$) & 1024 & 1062.7 & 0.007 & 0.116 \\
+10 & \textbf{AdaptiveDStream} & 1024 & \textbf{1280.9} & 0.031 & 0.157 \\
+12 & FixedGrid ($n{=}2$) & 4096 & 4498.2 & 0.205 & 0.270 \\
+12 & \textbf{AdaptiveDStream} & 1 & \textbf{7.2} & -0.000 & 0.011 \\
+15 & FixedGrid ($n{=}2$) & 32768 & 39090.9 & 0.022 & 0.105 \\
+15 & \textbf{AdaptiveDStream} & 1 & \textbf{7.3} & -0.001 & 0.004 \\
+20 & FixedGrid ($n{=}2$) & \multicolumn{4}{c}{skipped: $2^{20}$ cells exceeds the shared-budget comparison's validity} \\
+20 & \textbf{AdaptiveDStream} & 1 & \textbf{7.4} & -0.001 & 0.000 \\
 \bottomrule
 \end{tabular}%
 }
@@ -514,9 +516,9 @@ Dim & Model & Cells & Peak memory (KB) & ARI & NMI \\
 \label{fig:dimsweep}
 \end{figure}
 
-Two patterns emerge, both consistent with the earlier ($n=2500$) run but sharper. First, the memory hypothesis behind the method holds more strongly than before: from $d=2$ to $d=8$, AdaptiveDStream now uses only 7--24\% of the budget-matched fixed grid's memory (143~KB vs.\ 1950~KB at $d=2$; 1500~KB vs.\ 6334~KB at $d=8$), a larger relative gap than the earlier run's 35--87\%, since contraction reclaims memory from stale splits on top of the \texttt{max\_cells} cap that was already present. The fixed grid still cannot be tuned finely to a memory budget at high dimension, for the same reason as before: $n_{\text{cells per dim}}$ only moves in coarse integer steps, so at $d=8$ the jump from $n=2$ (256 cells) to $n=3$ (6561 cells) overshoots the 2500-cell target by 2.6$\times$. At $d=10$ the fixed grid again drops under budget (1054~KB) purely because $n_{\text{cells per dim}}$ bottoms out at 2, and AdaptiveDStream (1273~KB) is again the larger of the two there.
+Two patterns emerge, both consistent with the earlier ($n=2500$) run but sharper. First, the memory hypothesis behind the method holds more strongly than before: from $d=2$ to $d=8$, AdaptiveDStream now uses only 7--24\% of the budget-matched fixed grid's memory (144~KB vs.\ 1972~KB at $d=2$; 1511~KB vs.\ 6386~KB at $d=8$), a larger relative gap than the earlier run's 35--87\%, since contraction reclaims memory from stale splits on top of the \texttt{max\_cells} cap that was already present. The fixed grid still cannot be tuned finely to a memory budget at high dimension, for the same reason as before: $n_{\text{cells per dim}}$ only moves in coarse integer steps, so at $d=8$ the jump from $n=2$ (256 cells) to $n=3$ (6561 cells) overshoots the 2500-cell target by 2.6$\times$. At $d=10$ the fixed grid again drops under budget (1063~KB) purely because $n_{\text{cells per dim}}$ bottoms out at 2, and AdaptiveDStream (1281~KB) is again the larger of the two there.
 
-Second, AdaptiveDStream remains dominated in accuracy for $d=2$--$6$, and the gap narrows at $d=8$ exactly as before (ARI 34\% of the fixed grid's, up from single digits at low dimension) — consistent with the unchanged root cause (Section~\ref{sec:root-cause}): a split fragments mass across $2^d$ children, a far harsher penalty at $d=8$ (256-way) than at $d=2$ (4-way), and the dense threshold remains an absolute count regardless of contraction or transitional assignment. At $d=10$, AdaptiveDStream (0.047) nominally exceeds the fixed grid (0.030) for the first time — but the fixed grid's own ARI collapsed sharply relative to the earlier, larger-sample run (0.486 there vs.\ 0.030 here), most plausibly a small-sample artifact of an $n{=}2$-per-axis grid at only 400 points, not evidence that AdaptiveDStream overtook it on merit. Given the single seed, untuned per-dimension thresholds, and the smaller sample size used here, we treat this dimensionality result at $d\le 10$ as a preliminary signal worth pursuing rather than a validated finding, and read the $d=10$ reversal specifically as noise.
+Second, AdaptiveDStream remains dominated in accuracy for $d=2$--$6$, and the gap narrows at $d=8$ exactly as before (ARI 52\% of the fixed grid's, 0.229 vs.\ 0.441, up from single digits at low dimension; the fixed grid's own ARI fell from 0.697 to 0.441 under checkpointed clustering's cold start, so part of the narrowing is the fixed grid getting worse rather than AdaptiveDStream getting better) — consistent with the unchanged root cause (Section~\ref{sec:root-cause}): a split fragments mass across $2^d$ children, a far harsher penalty at $d=8$ (256-way) than at $d=2$ (4-way), and the dense threshold remains an absolute count regardless of contraction or transitional assignment. At $d=10$, AdaptiveDStream (0.031) nominally exceeds the fixed grid (0.007) — but the fixed grid's own ARI collapsed sharply relative to the earlier, larger-sample run (0.486 there vs.\ 0.007 here), most plausibly a small-sample artifact of an $n{=}2$-per-axis grid at only 400 points, not evidence that AdaptiveDStream overtook it on merit. Given the single seed, untuned per-dimension thresholds, and the smaller sample size used here, we treat this dimensionality result at $d\le 10$ as a preliminary signal worth pursuing rather than a validated finding, and read the $d=10$ reversal specifically as noise.
 
 Third, and the reason this sweep was extended past $d=10$: at $d=12$ the root's admission check for a split (projected leaf count $\le$ \texttt{max\_cells}$=2500$) is refused outright, since $2^{12}=4096$ alone already exceeds the budget before any refinement criterion is even evaluated. AdaptiveDStream is left with exactly one leaf, the whole domain, at $d=12,15,20$ (Table~\ref{tab:dimsweep}), and its ARI collapses to $0$ accordingly — a single-cluster prediction against genuinely two-cluster ground truth. This is architectural, not a criterion failure: no refinement statistic, however well calibrated (Section~\ref{sec:alt-criteria}), can influence a split decision that is vetoed before it runs. Reaching real-data dimensionality (e.g.\ the $\sim$41 features of KDD Cup~99) therefore requires the split rule itself to stop enumerating all $2^d$ children at once — splitting a single chosen axis, or the top-$k$ axes ranked by per-axis non-uniformity evidence, are the natural candidates — independent of, and prior to, which equidistribution criterion drives the decision. We return to this in the Future Work section below.
 
@@ -578,11 +580,11 @@ The frontier and dimensionality results above answer "accuracy versus memory on 
 \toprule
 Regime & FixedGrid $n{=}8$ & FixedGrid $n{=}32$ & \textbf{AdaptiveDStream} & DenStream & CluStream & DBSTREAM \\
 \midrule
-static\_no\_drift    & 0.472 & 0.785 & \textbf{0.123} & 0.542 & 0.241 & 0.543 \\
-spatial\_drift       & 0.037 & 0.764 & \textbf{0.030} & 0.064 & 0.133 & 0.017 \\
-density\_drift       & 0.450 & 0.318 & \textbf{0.109} & 0.611 & 0.354 & 0.422 \\
-two\_gaussian\_drift & 0.460 & 0.008 & \textbf{0.041} & 0.384 & 0.340 & 0.063 \\
-moons\_drift         & 0.004 & 0.001 & \textbf{0.004} & 0.043 & 0.116 & 0.010 \\
+static\_no\_drift    & 0.539 & 0.626 & \textbf{0.084} & 0.542 & 0.241 & 0.543 \\
+spatial\_drift       & 0.033 & 0.512 & \textbf{0.016} & 0.064 & 0.133 & 0.017 \\
+density\_drift       & 0.604 & 0.242 & \textbf{0.053} & 0.611 & 0.354 & 0.422 \\
+two\_gaussian\_drift & 0.386 & 0.003 & \textbf{0.057} & 0.384 & 0.340 & 0.063 \\
+moons\_drift         & 0.005 & 0.001 & \textbf{0.015} & 0.043 & 0.116 & 0.010 \\
 \bottomrule
 \end{tabular}%
 }
@@ -595,15 +597,15 @@ moons\_drift         & 0.004 & 0.001 & \textbf{0.004} & 0.043 & 0.116 & 0.010 \\
 \label{fig:regime-sweep}
 \end{figure}
 
-Peak memory is roughly regime-independent per model: FixedGrid $n{=}8$ uses 52--57~KB, FixedGrid $n{=}32$ uses 797--810~KB, \textbf{\texttt{AdaptiveDStream} now uses only 183--270~KB} (down from 676--1296~KB before contraction and transitional assignment), DenStream uses 15--37~KB, CluStream uses 95--99~KB, and DBSTREAM uses 17--36~KB. Fraction unassigned for \texttt{AdaptiveDStream} is 0.02--0.05 in every regime here, down from 0.34--0.53 previously. Three findings follow.
+Peak memory is roughly regime-independent per model: FixedGrid $n{=}8$ uses 54--60~KB, FixedGrid $n{=}32$ uses 806--808~KB, \textbf{\texttt{AdaptiveDStream} uses 177--259~KB} (down from 676--1296~KB before contraction and transitional assignment), DenStream uses 15--35~KB, CluStream uses 95--98~KB, and DBSTREAM uses 16--36~KB. Fraction unassigned for \texttt{AdaptiveDStream} is 0.14--0.12 across regimes, up from 0.02--0.05 in the previous run: at $n=500$ the 50-point cold start of checkpointed clustering alone accounts for 0.10 of it, and a comparable rise of 0.03--0.14 is visible for the fixed grids. Three findings follow.
 
-\textbf{No single fixed resolution wins across regimes.} \texttt{spatial\_drift} and \texttt{two\_gaussian\_drift} are the clearest contrast: FixedGrid $n{=}32$ wins \texttt{spatial\_drift} by a wide margin (0.764 vs.\ $n{=}8$'s 0.037, since only fine cells can resolve the tight cluster as it moves) and then collapses on \texttt{two\_gaussian\_drift} (0.008 vs.\ $n{=}8$'s 0.460) — cells fine enough for the adversarial density-mismatch stream are too fine for a stream with no density mismatch to justify them, so a moving symmetric cluster leaves too little decayed mass in any one cell before drifting onward. \texttt{density\_drift} shows the same reversal from the other side ($n{=}8$ wins, 0.450 vs.\ 0.318). This is the empirical case for adaptivity that motivates the method in Section~\ref{sec:method} — whichever single resolution is chosen up front, some regime here defeats it.
+\textbf{No single fixed resolution wins across regimes.} \texttt{spatial\_drift} and \texttt{two\_gaussian\_drift} are the clearest contrast: FixedGrid $n{=}32$ wins \texttt{spatial\_drift} by a wide margin (0.512 vs.\ $n{=}8$'s 0.033, since only fine cells can resolve the tight cluster as it moves) and then collapses on \texttt{two\_gaussian\_drift} (0.003 vs.\ $n{=}8$'s 0.386) — cells fine enough for the adversarial density-mismatch stream are too fine for a stream with no density mismatch to justify them, so a moving symmetric cluster leaves too little decayed mass in any one cell before drifting onward. \texttt{density\_drift} shows the same reversal from the other side ($n{=}8$ wins, 0.604 vs.\ 0.242). This is the empirical case for adaptivity that motivates the method in Section~\ref{sec:method} — whichever single resolution is chosen up front, some regime here defeats it.
 
-\textbf{\texttt{AdaptiveDStream} is dominated in every regime tested, including the static, no-drift control — but contraction and transitional assignment visibly moved the needle without closing the gap.} Peak memory and fraction unassigned both improved substantially and consistently across all five regimes (above), exactly what those two features were built to do. ARI itself moved in both directions depending on the regime: up in \texttt{static\_no\_drift} ($0.043\to0.123$), \texttt{density\_drift} ($0.070\to0.109$), and \texttt{two\_gaussian\_drift} ($0.006\to0.041$); down in \texttt{spatial\_drift} ($0.084\to0.030$); flat in \texttt{moons\_drift}. This is a mixed, modest pattern rather than a clear win, and \texttt{static\_no\_drift} remains far below the best fixed grid or \texttt{river} model there (0.123 vs.\ 0.785/0.543) — consistent with Section~\ref{sec:root-cause}: the non-volume-normalized dense threshold is untouched by either new feature, so the shortfall remains structural rather than drift-related.
+\textbf{\texttt{AdaptiveDStream} is dominated in every regime tested, including the static, no-drift control.} Peak memory (177--259~KB, against 676--1296~KB before contraction) is the one clear improvement over the original method. ARI moved against the previous run in both directions (\texttt{static\_no\_drift} $0.123\to0.084$, \texttt{spatial\_drift} $0.030\to0.016$, \texttt{density\_drift} $0.109\to0.053$, \texttt{two\_gaussian\_drift} $0.041\to0.057$, \texttt{moons\_drift} $0.004\to0.015$), but every regime's best model is still a fixed grid or an imported baseline, and the changes are within what the 50-point cold start (10\% of each 500-point stream) plausibly explains: the fixed grids moved by comparable amounts (FixedGrid $n{=}32$ on \texttt{spatial\_drift}, $0.764\to0.512$). \texttt{static\_no\_drift} remains far below the best fixed grid or \texttt{river} model (0.084 vs.\ 0.626/0.543), consistent with Section~\ref{sec:root-cause}: the non-volume-normalized dense threshold is untouched by any feature added so far, so the shortfall remains structural rather than drift-related.
 
-\textbf{Non-convex shape defeats every model tested, uniformly.} On \texttt{moons\_drift}, no grid-based model exceeds ARI 0.004 and no \texttt{river} baseline exceeds 0.116. Axis-aligned rectangular cells, and face-adjacency connectivity between them, are a poor fit for a non-convex cluster boundary at any resolution; this is a shape limitation orthogonal to the density and drift questions the other four regimes isolate, and no amount of resolution tuning among the models compared here would close it.
+\textbf{Non-convex shape defeats every model tested, uniformly.} On \texttt{moons\_drift}, no grid-based model exceeds ARI 0.015 and no \texttt{river} baseline exceeds 0.116. Axis-aligned rectangular cells, and face-adjacency connectivity between them, are a poor fit for a non-convex cluster boundary at any resolution; this is a shape limitation orthogonal to the density and drift questions the other four regimes isolate, and no amount of resolution tuning among the models compared here would close it.
 
-Among the imported baselines, DenStream and DBSTREAM remain the most consistently competitive without per-regime retuning — DenStream is strongest on \texttt{static\_no\_drift}, \texttt{density\_drift}, and \texttt{two\_gaussian\_drift}, with DBSTREAM close behind on the first two — each using an order of magnitude or more less memory than either fixed grid or \texttt{AdaptiveDStream}.
+Among the imported baselines, DenStream and DBSTREAM remain the most consistently competitive without per-regime retuning — DenStream is strongest on \texttt{static\_no\_drift} (where FixedGrid $n{=}32$ at 0.626 now edges it), \texttt{density\_drift}, and \texttt{two\_gaussian\_drift}, with DBSTREAM close behind on the first two — each using an order of magnitude or more less memory than either fixed grid or \texttt{AdaptiveDStream}.
 
 \subsection{Real-Data Memory-Accuracy Frontier}
 \label{sec:real-data}
@@ -612,24 +614,23 @@ Every result above uses synthetic streams, where ground truth is exact but every
 
 \begin{table}[h]
 \centering
-\caption{Best-of-family Adjusted Rand Index and peak memory, three real datasets, dim$=6$. Full sweep (all resolutions/budgets) in \texttt{outputs/real\_frontier\_results.json}.}
+\caption{Best-ARI-per-family Adjusted Rand Index and peak memory, three real datasets, dim$=6$. Full sweep (all resolutions/budgets) in \texttt{outputs/real\_frontier\_results.json}.}
 \label{tab:real-frontier}
 \begin{tabular}{llrr}
 \toprule
 Dataset & Model & Peak memory & ARI \\
 \midrule
-kddcup99 & FixedGrid $n{=}4$ & 3708~KB & 0.113 \\
-kddcup99 & \textbf{AdaptiveDStream} (max\_cells$=$6000) & 5496~KB & \textbf{0.132} \\
+kddcup99 & FixedGrid $n{=}4$ & 3740~KB & 0.085 \\
+kddcup99 & \textbf{AdaptiveDStream} (max\_cells$=$2000) & 1470~KB & \textbf{0.147} \\
 kddcup99 & DenStream & 33~KB & 0.393 \\
-kddcup99 & CluStream & 192~KB & 0.328 \\
 \addlinespace
-covtype & FixedGrid $n{=}3$ & 669~KB & 0.026 \\
-covtype & \textbf{AdaptiveDStream} (max\_cells$=$6000) & 5495~KB & \textbf{0.004} \\
+covtype & FixedGrid $n{=}3$ & 682~KB & 0.019 \\
+covtype & \textbf{AdaptiveDStream} (max\_cells$=$300) & 319~KB & \textbf{0.034} \\
 covtype & DBSTREAM & 50~KB & 0.038 \\
 \addlinespace
-sensor:shuttle & FixedGrid $n{=}3$ & 669~KB & 0.075 \\
-sensor:shuttle & \textbf{AdaptiveDStream} (max\_cells$=$2000) & 1800~KB & \textbf{0.035} \\
-sensor:shuttle & DenStream & 28~KB & 0.423 \\
+sensor:shuttle & FixedGrid $n{=}3$ & 676~KB & 0.062 \\
+sensor:shuttle & \textbf{AdaptiveDStream} (max\_cells$=$300) & 314~KB & \textbf{0.002} \\
+sensor:shuttle & DenStream & 27~KB & 0.423 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -648,16 +649,16 @@ sensor:shuttle & DenStream & 28~KB & 0.423 \\
 \label{fig:real-frontier-nmi}
 \end{figure}
 
-\textbf{On real data, neither grid method is competitive with the imported micro-cluster baselines, and \texttt{AdaptiveDStream} does not clearly outperform the fixed grid the way its memory advantage on synthetic noise dimensions (Section~\ref{sec:dim-sweep}) suggested it might.} Both \texttt{FixedGridDStream} and \texttt{AdaptiveDStream} score in a similar, weak, inconsistent range across all three datasets (ARI roughly $-0.03$ to $0.13$), while DenStream and DBSTREAM clear $0.34$--$0.42$ using $30$--$190\times$ less memory than \texttt{AdaptiveDStream}'s better-scoring configurations, on two of the three datasets (kddcup99, sensor). covtype is the exception where nothing scores well (best ARI anywhere is DBSTREAM's $0.038$), plausibly because the 7-class cartographic problem is not well suited to density-based clustering at all, independent of grid resolution or adaptivity.
+\textbf{On real data, neither grid method is competitive with the imported micro-cluster baselines, and \texttt{AdaptiveDStream} does not clearly outperform the fixed grid the way its memory advantage on synthetic noise dimensions (Section~\ref{sec:dim-sweep}) suggested it might.} Both \texttt{FixedGridDStream} and \texttt{AdaptiveDStream} score in a similar, weak, inconsistent range across all three datasets (best ARI per dataset $0.019$--$0.147$ for the grid methods), while DenStream (kddcup99 $0.393$, sensor $0.423$) and CluStream (kddcup99 $0.328$) do far better using roughly $10$--$45\times$ less memory than \texttt{AdaptiveDStream}'s best-scoring configurations. \texttt{AdaptiveDStream} is now nominally the best grid method on kddcup99 ($0.147$ vs.\ $0.085$) and covtype ($0.034$ vs.\ $0.019$) and the worst on sensor ($0.002$ vs.\ $0.062$), an inconsistency consistent with noise around zero rather than a real advantage; its memory is also 2--4$\times$ lower than before at the same \texttt{max\_cells} because idle pruning now works (e.g.\ 1470~KB at \texttt{max\_cells}$=2000$ on kddcup99). covtype is the exception where nothing scores well (best ARI anywhere is DBSTREAM's $0.038$), plausibly because the 7-class cartographic problem is not well suited to density-based clustering at all, independent of grid resolution or adaptivity.
 
-A degeneracy check on kddcup99 (\texttt{max\_cells}$=4000$) confirms the $2^d$-split-rule wall identified in Section~\ref{sec:dim-sweep} on real, not synthetic-noise, features: at dim$=10$, $2^{10}=1024 < 4000$ and \texttt{AdaptiveDStream} splits normally, reaching 3{,}070 leaves (ARI $0.056$); at dim$=12$, $2^{12}=4096 > 4000$, so \texttt{\_should\_split}'s admission check refuses the very first split and the entire reduced feature space remains one cell (leaves$=1$, ARI $0.001$) for the whole run, and stays that way at dim$=15$ and dim$=20$. This demonstrates the split-rule wall is not an artifact of the synthetic dimension sweep's isotropic-noise construction: a per-axis, rather than full-$2^d$-orthant, split rule is a hard prerequisite for this method to reach realistic feature counts (e.g.\ kddcup99's 38 numeric columns) at all, independent of any accuracy-side threshold fix.
+A degeneracy check on kddcup99 (\texttt{max\_cells}$=4000$) confirms the $2^d$-split-rule wall identified in Section~\ref{sec:dim-sweep} on real, not synthetic-noise, features. At dim$=12$, $2^{12}=4096 > 4000$, so \texttt{\_should\_split}'s admission check refuses the very first split and the entire reduced feature space remains one cell for the whole run (final leaves$=1$), and stays that way at dim$=15$ and dim$=20$. At dim$=10$, $2^{10}=1024 < 4000$ and \texttt{AdaptiveDStream} does split (peak memory 3.6~MB) but, now that idle pruning works, the tree has collapsed back to a single leaf by the end of the stream, where before the fix it ended with 3{,}070 leaves. The nonzero ARI of these one-cell runs (0.125 at dim$=10$, 0.074 at dim$\geq 12$; it was 0.001 when clustering ran per prediction) is \emph{not} signal: under checkpointed clustering the first 50 predictions are unassigned and every later one is the single cluster, and kddcup99's labels are strongly time-correlated, so that alone yields a positive ARI. The dim$\geq 12$ rows are therefore the null-model baseline for this metric on this stream. The wall itself is not an artifact of the synthetic dimension sweep's isotropic-noise construction: a per-axis, rather than full-$2^d$-orthant, split rule is a hard prerequisite for this method to reach realistic feature counts (e.g.\ kddcup99's 38 numeric columns) at all, independent of any accuracy-side threshold fix.
 
 \subsection{Recency-Weighted Re-Evaluation}
 \label{sec:recency-reeval}
 
-Every synthetic sweep above (frontier, split-strategy, dimensionality, cross-regime) was re-run with $\lambda_{\text{eval}} = 0.99$ (Section~\ref{sec:results}'s Evaluation Metrics), adding the windowed \texttt{ari\_recent} and decay-weighted \texttt{decayed\_purity} alongside the flat ARI already reported. This is not a replacement for the earlier numbers: the two lenses tell a genuinely different story depending on the experiment, in both directions, not uniformly a more flattering one for \texttt{AdaptiveDStream}.
+Every synthetic sweep above (frontier, split-strategy, dimensionality, cross-regime) was re-run with $\lambda_{\text{eval}} = 0.99$ (Section~\ref{sec:results}'s Evaluation Metrics; the numbers in this subsection are from the re-run with working idle pruning and checkpointed clustering), adding the windowed \texttt{ari\_recent} and decay-weighted \texttt{decayed\_purity} alongside the flat ARI already reported. This is not a replacement for the earlier numbers: the two lenses tell a genuinely different story depending on the experiment, in both directions, not uniformly a more flattering one for \texttt{AdaptiveDStream}.
 
-\textbf{Frontier sweep: the gap narrows, but does not close.} Table~\ref{tab:frontier-recent} and Figure~\ref{fig:frontier-recent} repeat Table~\ref{tab:frontier} with \texttt{ari\_recent} added. \texttt{AdaptiveDStream}'s ARI rises from $0.066$ (flat) to $0.582$ (recent) — but its immediate memory neighbors on the fixed-grid frontier rise further: FixedGrid $n{=}22$ (378~KB) reaches $0.842$, FixedGrid $n{=}32$ (799~KB) reaches $1.000$. DBSTREAM ($0.236 \to 0.481$) and DenStream ($0.092 \to 0.397$) improve similarly. Recency-weighting helps nearly every model on this stream — a 3-phase drifting stream is hardest for everyone before decayed mass accumulates early on — but the fixed-grid frontier's dominance over \texttt{AdaptiveDStream} survives this lens.
+\textbf{Frontier sweep: the gap does not close.} Table~\ref{tab:frontier-recent} and Figure~\ref{fig:frontier-recent} repeat Table~\ref{tab:frontier} with \texttt{ari\_recent} added. \texttt{AdaptiveDStream}'s ARI rises from $0.050$ (flat) to $0.308$ (recent), but its memory neighbors on the fixed-grid frontier score higher: FixedGrid $n{=}16$ (203~KB) reaches $0.521$, $n{=}22$ (385~KB) reaches $0.879$, and $n{=}32$ (814~KB) reaches $1.000$. (The previous run gave \texttt{AdaptiveDStream} $0.582$ at 666~KB; with pruning it holds less state and the recent-window score dropped, so the gap widened rather than narrowed.) DBSTREAM ($0.236 \to 0.481$) and DenStream ($0.092 \to 0.397$) improve similarly. Recency-weighting helps nearly every model on this stream — a 3-phase drifting stream is hardest for everyone before decayed mass accumulates early on — but the fixed-grid frontier's dominance over \texttt{AdaptiveDStream} survives this lens.
 
 \begin{table}[h]
 \centering
@@ -668,20 +669,20 @@ Every synthetic sweep above (frontier, split-strategy, dimensionality, cross-reg
 \toprule
 Model & Peak memory (KB) & ARI (flat) & ARI (recent) & Decayed purity \\
 \midrule
-FixedGrid $n{=}2$   & 10.0   & -0.001 & 0.000  & 0.542 \\
-FixedGrid $n{=}3$   & 13.1   & 0.001  & 0.000  & 0.542 \\
-FixedGrid $n{=}4$   & 17.7   & 0.001  & -0.004 & 0.542 \\
-DBSTREAM            & 22.9   & 0.236  & 0.481  & 0.978 \\
-FixedGrid $n{=}6$   & 32.7   & 0.004  & -0.008 & 0.542 \\
-DenStream           & 47.8   & 0.092  & 0.397  & 0.991 \\
-FixedGrid $n{=}8$   & 53.2   & 0.064  & -0.010 & 0.542 \\
-FixedGrid $n{=}11$  & 96.2   & 0.029  & 0.717  & 0.976 \\
-CluStream           & 99.0   & 0.061  & 0.485  & 0.980 \\
-FixedGrid $n{=}16$  & 199.7  & 0.203  & 0.677  & 0.991 \\
-FixedGrid $n{=}22$  & 378.0  & 0.442  & 0.842  & 0.999 \\
-\textbf{AdaptiveDStream} & \textbf{666.4} & \textbf{0.066} & \textbf{0.582} & \textbf{0.947} \\
-FixedGrid $n{=}32$  & 798.6  & 0.692  & 1.000  & 0.999 \\
-FixedGrid $n{=}45$  & 1581.4 & 0.822  & 0.978  & 0.996 \\
+FixedGrid $n{=}2$ & 12.0 & -0.001 & 0.000 & 0.542 \\
+FixedGrid $n{=}3$ & 15.7 & 0.001 & 0.000 & 0.542 \\
+FixedGrid $n{=}4$ & 20.2 & 0.001 & -0.004 & 0.542 \\
+DBSTREAM & 22.8 & 0.236 & 0.481 & 0.978 \\
+FixedGrid $n{=}6$ & 35.3 & 0.004 & -0.008 & 0.542 \\
+DenStream & 47.8 & 0.092 & 0.397 & 0.991 \\
+FixedGrid $n{=}8$ & 56.2 & 0.062 & -0.004 & 0.542 \\
+FixedGrid $n{=}11$ & 99.0 & 0.023 & 0.730 & 0.981 \\
+CluStream & 99.0 & 0.061 & 0.485 & 0.980 \\
+FixedGrid $n{=}16$ & 203.2 & 0.201 & 0.521 & 0.986 \\
+\textbf{AdaptiveDStream} & \textbf{304.3} & \textbf{0.050} & \textbf{0.308} & \textbf{0.988} \\
+FixedGrid $n{=}22$ & 385.1 & 0.414 & 0.879 & 0.998 \\
+FixedGrid $n{=}32$ & 814.1 & 0.669 & 1.000 & 0.999 \\
+FixedGrid $n{=}45$ & 1609.1 & 0.796 & 0.978 & 0.997 \\
 \bottomrule
 \end{tabular}%
 }
@@ -694,7 +695,7 @@ FixedGrid $n{=}45$  & 1581.4 & 0.822  & 0.978  & 0.996 \\
 \label{fig:frontier-recent}
 \end{figure}
 
-\textbf{Regime sweep: mixed, and in \texttt{AdaptiveDStream}'s favor more often than not.} Figure~\ref{fig:regime-recent} shows ARI (flat) $\to$ ARI (recent) for \texttt{AdaptiveDStream} across the five regimes of Table~\ref{tab:regime-ari}: \texttt{static\_no\_drift} $0.123 \to 0.214$, \texttt{spatial\_drift} $0.030 \to 0.026$ (flat), \texttt{density\_drift} $0.109 \to 0.029$ (worse), \texttt{two\_gaussian\_drift} $0.041 \to 0.247$ (a $6\times$ jump), \texttt{moons\_drift} $0.004 \to 0.040$. Four of five regimes improve or hold. \texttt{density\_drift} is the one exception, and it is plausibly a real effect rather than a metric artifact: that regime's dense cluster is deliberately widening over time ($\sigma: 0.15 \to 0.15 \to 1.1$), so the most recent phase is also the hardest one to resolve — a lower \texttt{ari\_recent} there is arguably measuring genuine difficulty, not a flaw in the lens.
+\textbf{Regime sweep: mixed, and in \texttt{AdaptiveDStream}'s favor more often than not.} Figure~\ref{fig:regime-recent} shows ARI (flat) $\to$ ARI (recent) for \texttt{AdaptiveDStream} across the five regimes of Table~\ref{tab:regime-ari}: \texttt{static\_no\_drift} $0.084 \to 0.363$, \texttt{spatial\_drift} $0.016 \to 0.009$ (flat), \texttt{density\_drift} $0.053 \to -0.004$ (worse), \texttt{two\_gaussian\_drift} $0.057 \to 0.657$ (a $12\times$ jump), \texttt{moons\_drift} $0.015 \to 0.220$. Three of five regimes improve substantially and one holds flat. \texttt{density\_drift} is the one exception, and it is plausibly a real effect rather than a metric artifact: that regime's dense cluster is deliberately widening over time ($\sigma: 0.15 \to 0.15 \to 1.1$), so the most recent phase is also the hardest one to resolve — a lower \texttt{ari\_recent} there is arguably measuring genuine difficulty, not a flaw in the lens.
 
 \begin{figure}[h]
 \centering
@@ -703,19 +704,19 @@ FixedGrid $n{=}45$  & 1581.4 & 0.822  & 0.978  & 0.996 \\
 \label{fig:regime-recent}
 \end{figure}
 
-\textbf{Split-strategy and dimensionality sweeps show the same broad pattern as the frontier sweep.} Every split strategy improves substantially under the recent lens (\texttt{equal\_uniform} $0.024 \to 0.527$, \texttt{point\_mass} $0.017 \to 0.335$, \texttt{moment\_based} $0.021 \to 0.300$), with the same relative ordering preserved as under the flat metric — recency-weighting does not change which strategy looks best, only by how much every strategy trails the fixed-grid frontier (FixedGrid $n{=}32$: $0.667 \to 0.903$). The dimension sweep likewise shows $\text{ARI}_{\text{recent}} \geq \text{ARI}$ for nearly every row across $d \in \{2,\ldots,20\}$, consistent with "early-stream underperformance while decayed mass accumulates" being a shared effect across models and dimensions, not something specific to \texttt{AdaptiveDStream}. One point worth noting: $d{=}10$ is the one dimension where \texttt{AdaptiveDStream}'s flat ARI ($0.047$) already edges out the fixed grid's ($0.030$; Section~\ref{sec:dim-sweep} read this as plausibly small-sample noise), and \texttt{ari\_recent} preserves the same ordering ($0.129$ vs.\ $0.082$) rather than reversing it — mildly more supportive of a real effect than pure noise would predict, though still a single seed.
+\textbf{Split-strategy and dimensionality sweeps show the same broad pattern as the frontier sweep.} Every split strategy improves substantially under the recent lens (\texttt{equal\_uniform} $0.033 \to 0.519$, \texttt{point\_mass} $0.020 \to 0.378$, \texttt{moment\_based} $0.033 \to 0.310$); under the recent lens \texttt{equal\_uniform} is clearly best and \texttt{moment\_based} falls below \texttt{point\_mass}, so the flat-metric tie between \texttt{equal\_uniform} and \texttt{moment\_based} does not carry over, a reason to treat the flat ordering as weak evidence. Every strategy still trails the fixed-grid frontier (FixedGrid $n{=}32$: $0.504 \to 0.903$). The dimension sweep likewise shows $\text{ARI}_{\text{recent}} \geq \text{ARI}$ for nearly every row across $d \in \{2,\ldots,20\}$, consistent with "early-stream underperformance while decayed mass accumulates" being a shared effect across models and dimensions, not something specific to \texttt{AdaptiveDStream}. One point worth noting: $d{=}10$ is the one dimension where \texttt{AdaptiveDStream}'s flat ARI ($0.031$) edges out the fixed grid's ($0.007$; Section~\ref{sec:dim-sweep} read this as plausibly small-sample noise), and \texttt{ari\_recent} preserves the ordering ($0.153$ vs.\ $0.051$) — mildly more supportive of a real effect than pure noise would predict, though still a single seed.
 
 \textbf{Recency-weighting is not a way to make the headline result disappear.} The frontier-sweep conclusion (Section~\ref{sec:root-cause}) holds under this lens too. But it materially changes the regime-sweep story: under a lens consistent with the method's own design assumption — that recent data should matter more — \texttt{AdaptiveDStream} looks meaningfully better in most of the regimes tested. Both views belong in the record side by side, not one instead of the other; full numbers (including \texttt{nmi\_recent} and the exact window size per run) are in \texttt{outputs/\{frontier,regime\_sweep,split\_strategy,dimension\_sweep\}\_results.json}.
 
 \subsection{Summary of Findings}
 
-The current prototype is not yet competitive with either the fixed-grid frontier or the imported published baselines, on ARI, on any of the streams evaluated, synthetic or real. Two of the three items added since the previous version of this evaluation, contraction and transitional-cell assignment, are measurable, unambiguous successes at what they targeted: peak memory and fraction unassigned both improved substantially and consistently across the frontier sweep, the regime sweep, and the dimensionality sweep. Neither improved ARI, and the split-strategy comparison (Section~\ref{sec:split-strategy}) shows the third addition, alternative split-mass redistribution, does not either.
+The current prototype is not yet competitive with either the fixed-grid frontier or the imported published baselines, on ARI, on any of the streams evaluated, synthetic or real. Two of the three items added since the previous version of this evaluation, contraction and transitional-cell assignment, are measurable successes at what they targeted: peak memory and fraction unassigned both improved substantially across the frontier sweep, the regime sweep, and the dimensionality sweep (with working idle pruning, memory improved further, and checkpointed clustering added a cold-start cost to fraction unassigned that all grid models share). Neither improved ARI, and the split-strategy comparison (Section~\ref{sec:split-strategy}) shows the third addition, alternative split-mass redistribution, does not either.
 
 A fourth addition, since the previous version of this evaluation, does address the dense/sparse threshold's lack of volume normalization directly: \texttt{AdaptiveDStream(density\_normalize=True)} rescales a cell's decayed count by \(\text{domain\_volume}/\text{vol}(g)\) before the threshold comparison, exactly the density-versus-absolute-count fix Section~\ref{sec:root-cause} identifies as the cause. This was implemented and evaluated, and \emph{reduces} ARI to chance level at every threshold tried, not the improvement the diagnosis predicted. The scale factor grows as \(2^{d \cdot \text{level}}\), overshooting by orders of magnitude well before \texttt{max\_depth} is reached and causing almost any cell that has split a few levels deep to read as dense regardless of whether that reflects real local density — a mechanism problem in the specific (undamped, uncapped) scaling used, not evidence the underlying diagnosis in Section~\ref{sec:root-cause} is wrong. This is reported here as a negative result rather than left untested: the direction motivated by Section~\ref{sec:root-cause} does not work as a simple linear rescaling, and a damped (e.g.\ \(\sqrt{\cdot}\) or capped) variant is the natural next attempt, not yet tried.
 
-Section~\ref{sec:real-data} extends the evaluation to three real datasets and finds the same qualitative pattern as the synthetic streams: \texttt{AdaptiveDStream} is not competitive with the imported baselines, and a degeneracy check confirms, on real (not synthetic-noise) features, that the \(2^d\)-split-rule identified in Section~\ref{sec:dim-sweep} is a hard architectural wall independent of any threshold fix — at kddcup99 dim$=12$ with \texttt{max\_cells}$=4000$, the model cannot perform a single split for the entire run. With the direct density-normalization fix now tried and found insufficient on its own, and the split-rule wall now confirmed on real data, we consider the per-axis split-rule redesign the higher-priority remaining item, ahead of further threshold-normalization variants.
+Section~\ref{sec:real-data} extends the evaluation to three real datasets and finds the same qualitative pattern as the synthetic streams: \texttt{AdaptiveDStream} is not competitive with the imported baselines, and a degeneracy check confirms, on real (not synthetic-noise) features, that the \(2^d\)-split-rule identified in Section~\ref{sec:dim-sweep} is a hard architectural wall independent of any threshold fix — at kddcup99 dim$=12$ with \texttt{max\_cells}$=4000$, the model cannot perform a single split for the entire run (and its nonzero ARI there is a cold-start artifact, not signal). With the direct density-normalization fix now tried and found insufficient on its own, and the split-rule wall now confirmed on real data, we consider the per-axis split-rule redesign the higher-priority remaining item, ahead of further threshold-normalization variants.
 
-The recency-weighted re-evaluation in Section~\ref{sec:recency-reeval} does not change this picture on the frontier sweep specifically — the fixed-grid frontier's dominance survives a lens that weights recent points more, consistent with the method's own decay assumption — but it does change the cross-regime picture materially: \texttt{AdaptiveDStream} improves under that lens in four of the five regimes tested, in one case ($\texttt{two\_gaussian\_drift}$) by more than $6\times$. All ARI numbers elsewhere in this section are the conventional, flat metric; Section~\ref{sec:recency-reeval} should be read alongside them, not as a correction superseding them.
+The recency-weighted re-evaluation in Section~\ref{sec:recency-reeval} does not change this picture on the frontier sweep specifically — the fixed-grid frontier's dominance survives a lens that weights recent points more, consistent with the method's own decay assumption — but it does change the cross-regime picture materially: \texttt{AdaptiveDStream} improves under that lens substantially in three of the five regimes tested and holds flat in a fourth, in one case ($\texttt{two\_gaussian\_drift}$) by about $12\times$. All ARI numbers elsewhere in this section are the conventional, flat metric; Section~\ref{sec:recency-reeval} should be read alongside them, not as a correction superseding them.
 
 We consider all of this an honest characterization of a first working implementation rather than a limitation of the underlying idea — the memory and unassigned-fraction results confirm that refine-where-dense, merge-or-assign-where-not behaves as designed.
 

@@ -2,15 +2,15 @@
   {
     "name": "FixedGrid(n=2)",
     "n_points": 2000,
-    "ari": -0.0009712610809386904,
-    "nmi": 0.014181225296976697,
-    "purity": 0.519,
-    "fraction_unassigned": 0.004,
-    "peak_memory_bytes": 10222,
-    "elapsed_seconds": 0.21037129999604076,
-    "throughput_pts_per_sec": 9507.00024213208,
+    "ari": -0.0007389282029798831,
+    "nmi": 0.013164197558334888,
+    "purity": 0.52,
+    "fraction_unassigned": 0.025,
+    "peak_memory_bytes": 12279,
+    "elapsed_seconds": 0.040194250002969056,
+    "throughput_pts_per_sec": 49758.36095591445,
     "ari_by_phase": {
-      "0": 0.0037135656050668537,
+      "0": 0.002459591364617473,
       "1": 0.0,
       "2": 0.0
     },
@@ -97,7 +97,7 @@
       ]
     ],
     "eval_decay": 0.99,
-    "decayed_purity": 0.5417800947789506,
+    "decayed_purity": 0.5417800949895858,
     "ari_recent": 0.0,
     "nmi_recent": 0.0,
     "recent_window": 100,
@@ -107,16 +107,16 @@
   {
     "name": "FixedGrid(n=3)",
     "n_points": 2000,
-    "ari": 0.0005837146287599836,
-    "nmi": 0.002143832204834168,
-    "purity": 0.5215,
-    "fraction_unassigned": 0.0095,
-    "peak_memory_bytes": 13454,
-    "elapsed_seconds": 0.3878316000336781,
-    "throughput_pts_per_sec": 5156.877365914294,
+    "ari": 0.0007335834708151566,
+    "nmi": 0.0010741693968488258,
+    "purity": 0.522,
+    "fraction_unassigned": 0.03,
+    "peak_memory_bytes": 16081,
+    "elapsed_seconds": 0.045032334004645236,
+    "throughput_pts_per_sec": 44412.53255480147,
     "ari_by_phase": {
-      "0": -8.873015808393498e-05,
-      "1": 0.0029849268677824303,
+      "0": -0.00035838659780819507,
+      "1": 0.002042099161556056,
       "2": 0.0003002105932053237
     },
     "active_cells_over_time": [
@@ -202,7 +202,7 @@
       ]
     ],
     "eval_decay": 0.99,
-    "decayed_purity": 0.5420134342670347,
+    "decayed_purity": 0.5420151771406755,
     "ari_recent": 0.0,
     "nmi_recent": 0.0,
     "recent_window": 100,
@@ -212,17 +212,17 @@
   {
     "name": "FixedGrid(n=4)",
     "n_points": 2000,
-    "ari": 0.0009413466945745147,
-    "nmi": 0.021372400688521323,
-    "purity": 0.5295,
-    "fraction_unassigned": 0.0145,
-    "peak_memory_bytes": 18166,
-    "elapsed_seconds": 0.5667782000382431,
-    "throughput_pts_per_sec": 3528.717229888254,
+    "ari": 0.0013104859951420555,
+    "nmi": 0.00875652744748854,
+    "purity": 0.53,
+    "fraction_unassigned": 0.035,
+    "peak_memory_bytes": 20649,
+    "elapsed_seconds": 0.04851645800226834,
+    "throughput_pts_per_sec": 41223.12473648616,
     "ari_by_phase": {
-      "0": 0.0015605556737703103,
+      "0": 0.0005840227748082378,
       "1": 0.0015976816023035136,
-      "2": 0.002842616423811898
+      "2": 0.00420568820941653
     },
     "active_cells_over_time": [
       [
@@ -307,7 +307,7 @@
       ]
     ],
     "eval_decay": 0.99,
-    "decayed_purity": 0.5417800946231015,
+    "decayed_purity": 0.5417800946864338,
     "ari_recent": -0.004284949116229245,
     "nmi_recent": 0.015736872534476518,
     "recent_window": 100,
@@ -317,17 +317,17 @@
   {
     "name": "FixedGrid(n=6)",
     "n_points": 2000,
-    "ari": 0.003961383766251181,
-    "nmi": 0.041960585047118866,
-    "purity": 0.543,
-    "fraction_unassigned": 0.031,
-    "peak_memory_bytes": 33462,
-    "elapsed_seconds": 1.347180999990087,
-    "throughput_pts_per_sec": 1484.5815076182907,
+    "ari": 0.003870994941916725,
+    "nmi": 0.026388531399796713,
+    "purity": 0.542,
+    "fraction_unassigned": 0.05,
+    "peak_memory_bytes": 36097,
+    "elapsed_seconds": 0.061493624991271645,
+    "throughput_pts_per_sec": 32523.696566658386,
     "ari_by_phase": {
-      "0": 0.0035594315245354334,
-      "1": 0.008118419010844995,
-      "2": 0.006282706099785443
+      "0": 0.0025739061655696135,
+      "1": 0.0074760570704828335,
+      "2": 0.0068450612706966365
     },
     "active_cells_over_time": [
       [
@@ -412,7 +412,7 @@
       ]
     ],
     "eval_decay": 0.99,
-    "decayed_purity": 0.5417801485591734,
+    "decayed_purity": 0.5417800949895858,
     "ari_recent": -0.007760604115428168,
     "nmi_recent": 0.029992248470637264,
     "recent_window": 100,
@@ -422,17 +422,17 @@
   {
     "name": "FixedGrid(n=8)",
     "n_points": 2000,
-    "ari": 0.06433238063995916,
-    "nmi": 0.20004869561725463,
-    "purity": 0.64,
-    "fraction_unassigned": 0.0445,
-    "peak_memory_bytes": 54526,
-    "elapsed_seconds": 2.1470325999544,
-    "throughput_pts_per_sec": 931.5182266177407,
+    "ari": 0.06151083804785116,
+    "nmi": 0.1678783207144004,
+    "purity": 0.636,
+    "fraction_unassigned": 0.067,
+    "peak_memory_bytes": 57545,
+    "elapsed_seconds": 0.07459608300996479,
+    "throughput_pts_per_sec": 26811.05923125794,
     "ari_by_phase": {
-      "0": 0.8150011971142904,
-      "1": 0.009847359249466912,
-      "2": 0.016601229293892093
+      "0": 0.7907784612925863,
+      "1": 0.006807844221144545,
+      "2": 0.017163541995151067
     },
     "active_cells_over_time": [
       [
@@ -517,9 +517,9 @@
       ]
     ],
     "eval_decay": 0.99,
-    "decayed_purity": 0.5417808049290029,
-    "ari_recent": -0.010427427162149738,
-    "nmi_recent": 0.04327747234909861,
+    "decayed_purity": 0.5417800941349739,
+    "ari_recent": -0.004284949116229245,
+    "nmi_recent": 0.015736872534476518,
     "recent_window": 100,
     "family": "FixedGridDStream",
     "n_cells_per_dim": 8
@@ -527,17 +527,17 @@
   {
     "name": "FixedGrid(n=11)",
     "n_points": 2000,
-    "ari": 0.029487817215601075,
-    "nmi": 0.0797264033504562,
-    "purity": 0.6105,
-    "fraction_unassigned": 0.1005,
-    "peak_memory_bytes": 98504,
-    "elapsed_seconds": 3.89552590000676,
-    "throughput_pts_per_sec": 513.4094988295494,
+    "ari": 0.02301620478956697,
+    "nmi": 0.05764842386444687,
+    "purity": 0.6005,
+    "fraction_unassigned": 0.1205,
+    "peak_memory_bytes": 101330,
+    "elapsed_seconds": 0.10235529200872406,
+    "throughput_pts_per_sec": 19539.781097293275,
     "ari_by_phase": {
-      "0": 0.5168115812823617,
-      "1": 0.025319638414753716,
-      "2": 0.6353399634751011
+      "0": 0.5626577126075685,
+      "1": 0.02288340804042341,
+      "2": 0.608309672497762
     },
     "active_cells_over_time": [
       [
@@ -622,9 +622,9 @@
       ]
     ],
     "eval_decay": 0.99,
-    "decayed_purity": 0.9759012929993216,
-    "ari_recent": 0.7174320222179165,
-    "nmi_recent": 0.7264645598278113,
+    "decayed_purity": 0.9813277449232682,
+    "ari_recent": 0.729930726625843,
+    "nmi_recent": 0.7322250658591887,
     "recent_window": 100,
     "family": "FixedGridDStream",
     "n_cells_per_dim": 11
@@ -632,17 +632,17 @@
   {
     "name": "FixedGrid(n=16)",
     "n_points": 2000,
-    "ari": 0.20307297571808738,
-    "nmi": 0.2051934801012152,
-    "purity": 0.789,
-    "fraction_unassigned": 0.268,
-    "peak_memory_bytes": 204464,
-    "elapsed_seconds": 6.100968599959742,
-    "throughput_pts_per_sec": 327.8167994526635,
+    "ari": 0.20113641387093253,
+    "nmi": 0.18545246914319016,
+    "purity": 0.786,
+    "fraction_unassigned": 0.2935,
+    "peak_memory_bytes": 208088,
+    "elapsed_seconds": 0.12599058300838806,
+    "throughput_pts_per_sec": 15874.202279600899,
     "ari_by_phase": {
-      "0": 0.2260844754669917,
-      "1": 0.14709035881892893,
-      "2": 0.7047477729116277
+      "0": 0.2873656850471787,
+      "1": 0.16297442529387612,
+      "2": 0.633502813233821
     },
     "active_cells_over_time": [
       [
@@ -727,9 +727,9 @@
       ]
     ],
     "eval_decay": 0.99,
-    "decayed_purity": 0.9905909948219634,
-    "ari_recent": 0.6771740534025855,
-    "nmi_recent": 0.6974626344949516,
+    "decayed_purity": 0.9861927508586487,
+    "ari_recent": 0.5208612666614086,
+    "nmi_recent": 0.5794918929408707,
     "recent_window": 100,
     "family": "FixedGridDStream",
     "n_cells_per_dim": 16
@@ -737,17 +737,17 @@
   {
     "name": "FixedGrid(n=22)",
     "n_points": 2000,
-    "ari": 0.442082254100951,
-    "nmi": 0.4029900288779858,
-    "purity": 0.9155,
-    "fraction_unassigned": 0.4185,
-    "peak_memory_bytes": 387064,
-    "elapsed_seconds": 7.544819400005508,
-    "throughput_pts_per_sec": 265.08255452722165,
+    "ari": 0.4137101412759238,
+    "nmi": 0.3556610017854122,
+    "purity": 0.9005,
+    "fraction_unassigned": 0.4365,
+    "peak_memory_bytes": 394312,
+    "elapsed_seconds": 0.14299158299400005,
+    "throughput_pts_per_sec": 13986.837253797801,
     "ari_by_phase": {
-      "0": 0.45958961320715763,
-      "1": 0.36209966504602636,
-      "2": 0.8574422195351576
+      "0": 0.4095790706533914,
+      "1": 0.33945476653525225,
+      "2": 0.8152428463888801
     },
     "active_cells_over_time": [
       [
@@ -832,9 +832,9 @@
       ]
     ],
     "eval_decay": 0.99,
-    "decayed_purity": 0.9987360777870213,
-    "ari_recent": 0.8421279306601107,
-    "nmi_recent": 0.8407721340335222,
+    "decayed_purity": 0.9984782691686143,
+    "ari_recent": 0.8788507513048223,
+    "nmi_recent": 0.8779679625264235,
     "recent_window": 100,
     "family": "FixedGridDStream",
     "n_cells_per_dim": 22
@@ -842,17 +842,17 @@
   {
     "name": "FixedGrid(n=32)",
     "n_points": 2000,
-    "ari": 0.692434713906619,
-    "nmi": 0.6268081551491058,
-    "purity": 0.963,
-    "fraction_unassigned": 0.482,
-    "peak_memory_bytes": 817784,
-    "elapsed_seconds": 13.10393689997727,
-    "throughput_pts_per_sec": 152.62588756845045,
+    "ari": 0.6692072394879746,
+    "nmi": 0.5936046842661429,
+    "purity": 0.9485,
+    "fraction_unassigned": 0.503,
+    "peak_memory_bytes": 833640,
+    "elapsed_seconds": 0.19814462499925867,
+    "throughput_pts_per_sec": 10093.637412609516,
     "ari_by_phase": {
-      "0": 0.6416921515535704,
-      "1": 0.6400185068621582,
-      "2": 0.9134860986242361
+      "0": 0.5663488277410056,
+      "1": 0.6558698237790161,
+      "2": 0.8677074727237231
     },
     "active_cells_over_time": [
       [
@@ -937,7 +937,7 @@
       ]
     ],
     "eval_decay": 0.99,
-    "decayed_purity": 0.9993560247470669,
+    "decayed_purity": 0.9992630334330824,
     "ari_recent": 1.0,
     "nmi_recent": 1.0,
     "recent_window": 100,
@@ -947,17 +947,17 @@
   {
     "name": "FixedGrid(n=45)",
     "n_points": 2000,
-    "ari": 0.8215588831033264,
-    "nmi": 0.7387148596241817,
-    "purity": 0.9645,
-    "fraction_unassigned": 0.5055,
-    "peak_memory_bytes": 1619360,
-    "elapsed_seconds": 23.299362800025847,
-    "throughput_pts_per_sec": 85.83925737221368,
+    "ari": 0.7956367847021703,
+    "nmi": 0.7246437520110695,
+    "purity": 0.9465,
+    "fraction_unassigned": 0.5255,
+    "peak_memory_bytes": 1647704,
+    "elapsed_seconds": 0.3184697499964386,
+    "throughput_pts_per_sec": 6280.031306026289,
     "ari_by_phase": {
-      "0": 0.8381690956316662,
-      "1": 0.7511933179676085,
-      "2": 0.8811413300138891
+      "0": 0.7898110579236649,
+      "1": 0.7794622485511115,
+      "2": 0.8173352514216256
     },
     "active_cells_over_time": [
       [
@@ -1042,7 +1042,7 @@
       ]
     ],
     "eval_decay": 0.99,
-    "decayed_purity": 0.9964054879883889,
+    "decayed_purity": 0.997280358896126,
     "ari_recent": 0.9777795334689605,
     "nmi_recent": 0.9647237178921511,
     "recent_window": 100,
@@ -1052,17 +1052,17 @@
   {
     "name": "AdaptiveDStream",
     "n_points": 2000,
-    "ari": 0.06595832477222145,
-    "nmi": 0.07763209760553945,
-    "purity": 0.7135,
-    "fraction_unassigned": 0.213,
-    "peak_memory_bytes": 682416,
-    "elapsed_seconds": 91.9778806999675,
-    "throughput_pts_per_sec": 21.7443583694216,
+    "ari": 0.05002693176980544,
+    "nmi": 0.08981888753679126,
+    "purity": 0.7285,
+    "fraction_unassigned": 0.194,
+    "peak_memory_bytes": 311570,
+    "elapsed_seconds": 1.502470458013704,
+    "throughput_pts_per_sec": 1331.1409813967591,
     "ari_by_phase": {
-      "0": 0.03270138271878659,
-      "1": 0.08548165227349414,
-      "2": 0.2871267713765095
+      "0": 0.04576877072274076,
+      "1": 0.0942558429350369,
+      "2": 0.2028233712754437
     },
     "active_cells_over_time": [
       [
@@ -1083,73 +1083,73 @@
       ],
       [
         500,
-        205
+        188
       ],
       [
         600,
-        217
+        196
       ],
       [
         700,
-        256
+        221
       ],
       [
         800,
-        295
+        246
       ],
       [
         900,
-        319
+        243
       ],
       [
         1000,
-        355
+        247
       ],
       [
         1100,
-        388
+        229
       ],
       [
         1200,
-        403
+        235
       ],
       [
         1300,
-        430
+        228
       ],
       [
         1400,
-        463
+        217
       ],
       [
         1500,
-        484
+        216
       ],
       [
         1600,
-        526
+        214
       ],
       [
         1700,
-        559
+        196
       ],
       [
         1800,
-        595
+        167
       ],
       [
         1900,
-        622
+        149
       ],
       [
         2000,
-        637
+        144
       ]
     ],
     "eval_decay": 0.99,
-    "decayed_purity": 0.9469462482314318,
-    "ari_recent": 0.581860907313398,
-    "nmi_recent": 0.5503627238618142,
+    "decayed_purity": 0.9877540764203975,
+    "ari_recent": 0.3079798489747253,
+    "nmi_recent": 0.4636929096310741,
     "recent_window": 100,
     "family": "AdaptiveDStream",
     "n_cells_per_dim": null
@@ -1162,8 +1162,8 @@
     "purity": 0.842,
     "fraction_unassigned": 0.0,
     "peak_memory_bytes": 48960,
-    "elapsed_seconds": 0.8512504999525845,
-    "throughput_pts_per_sec": 2349.484670037083,
+    "elapsed_seconds": 0.4252178750029998,
+    "throughput_pts_per_sec": 4703.47113226576,
     "ari_by_phase": {
       "0": 0.5414971031614828,
       "1": 0.2557510160274418,
@@ -1267,8 +1267,8 @@
     "purity": 0.687,
     "fraction_unassigned": 0.0,
     "peak_memory_bytes": 101344,
-    "elapsed_seconds": 0.2937161999871023,
-    "throughput_pts_per_sec": 6809.294142058981,
+    "elapsed_seconds": 0.1465823329926934,
+    "throughput_pts_per_sec": 13644.209088278685,
     "ari_by_phase": {
       "0": 0.19597352651213681,
       "1": 0.06356294224959756,
@@ -1371,9 +1371,9 @@
     "nmi": 0.22077627748314857,
     "purity": 0.806,
     "fraction_unassigned": 0.0,
-    "peak_memory_bytes": 23400,
-    "elapsed_seconds": 0.255947700003162,
-    "throughput_pts_per_sec": 7814.096395378007,
+    "peak_memory_bytes": 23368,
+    "elapsed_seconds": 0.14606408300460316,
+    "throughput_pts_per_sec": 13692.620107962959,
     "ari_by_phase": {
       "0": 0.5476957941945396,
       "1": 0.07160480151143603,

@@ -110,9 +110,10 @@ def test_moment_based_split_conserves_total_mass_exactly():
     cell.s1 = np.array([12.0, 12.0])  # mean = (0.6, 0.6)
     cell.s2 = np.array([8.0, 8.0])    # variance = 8/20 - 0.6^2 = 0.04
     cell.raw_count = 20
+    parent_mass = cell.s0
     model._split(cell)
     assert len(cell.children) == 4
-    assert sum(c.s0 for c in cell.children) == pytest.approx(cell.s0, rel=1e-9)
+    assert sum(c.s0 for c in cell.children) == pytest.approx(parent_mass, rel=1e-9)
 
 
 def test_contraction_merges_stale_split_back_into_leaf():
@@ -215,3 +216,51 @@ def test_density_normalize_scales_effective_count_by_inverse_relative_volume():
     # ...but the identical raw count would not clear the threshold unscaled.
     assert quarter_cell.state(model.t, model.decay, model.dense_threshold,
                                model.sparse_threshold, 1.0) == "transitional"
+
+
+# merge-driven shrink, then prune-only shrink
+@pytest.mark.parametrize("merge_min_age,idle_prune_after", [(20, 30), (10**9, 30)])
+def test_running_leaf_counter_matches_tree_through_split_merge_prune(merge_min_age, idle_prune_after):
+    rng = np.random.default_rng(0)
+    model = AdaptiveDStream(
+        lower=np.array([-1.0, -1.0]), upper=np.array([1.0, 1.0]),
+        split_threshold=0.04, merge_threshold=0.01, merge_min_age=merge_min_age,
+        decay=0.9, maintenance_interval=10, idle_prune_after=idle_prune_after, sparse_threshold=2.0, max_depth=4,
+    )
+    seen_splits = seen_shrinks = 0
+    prev = model.n_leaves
+    # Two phases in different corners so early splits go idle and get merged/pruned.
+    for t in range(1, 1201):
+        center = np.array([0.6, 0.6]) if t <= 600 else np.array([-0.6, -0.6])
+        model.partial_fit(np.clip(rng.normal(center, 0.15), -1, 1), t=t)
+        assert model.n_leaves == len(model.leaves())
+        seen_splits += model.n_leaves > prev
+        seen_shrinks += model.n_leaves < prev
+        prev = model.n_leaves
+    assert seen_splits > 0 and seen_shrinks > 0
+
+
+def test_clustering_runs_only_at_checkpoints_not_per_prediction():
+    rng = np.random.default_rng(1)
+    model = AdaptiveDStream(
+        lower=np.array([-1.0, -1.0]), upper=np.array([1.0, 1.0]),
+        maintenance_interval=50, dense_threshold=3.0, sparse_threshold=0.5,
+    )
+    calls = []
+    original = model._assign_clusters
+    model._assign_clusters = lambda: (calls.append(model.t), original())[1]
+    preds = []
+    for t in range(1, 150):
+        x = np.clip(rng.normal([0.5, 0.5], 0.05), -1, 1)
+        preds.append(model.predict_point_cluster(x))
+        model.partial_fit(x, t=t)
+    assert calls == [50, 100]  # checkpoints only; 149 predictions triggered no clustering
+    assert all(p is None for p in preds[:50])  # nothing clustered before the first checkpoint
+    assert preds[-1] is not None  # dense blob is labelled once a checkpoint has run
+
+
+def test_split_children_inherit_parent_cluster_id():
+    model = AdaptiveDStream(lower=np.array([-1.0, -1.0]), upper=np.array([1.0, 1.0]))
+    model.root.cluster_id = 7
+    model._split(model.root)
+    assert [c.cluster_id for c in model.root.children] == [7, 7, 7, 7]
