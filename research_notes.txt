@@ -1059,3 +1059,107 @@ Compiled clean: 28 pages, no undefined references, no multiply-defined
 labels (checked explicitly via grep on main.log, not just eyeballed).
 latex/output/adative_D_stream.pdf updated. Full test suite (38 tests)
 still passes -- this was a docs/tex-only change, no src/ edits at this step.
+
+================================================================
+18. P11 CORRECTNESS FIXES (CELL BOUNDARIES) + RECENCY-WEIGHTED MEMORY
+    FRONTIER PLOTS ADDED (2026-09-18)
+================================================================
+Corresponds to 13-week-plan item p11 (correctness pass) and part of the
+follow-up to the p14 split-strategy design discussion.
+
+P11 -- three fixes, all in cell.py/model.py:
+  1. GridCell.contains was closed on both bounds ([lower, upper] per axis),
+     so a point sitting exactly on the face shared by two sibling cells
+     matched both of them; _find_leaf silently broke the tie by taking
+     whichever child came first in itertools.product order. Changed to
+     half-open ([lower, upper)); the one point this excludes (the global
+     upper corner of the whole domain) is handled in _find_leaf by nudging
+     the *search key* used for tree descent with np.nextafter (the actual
+     point used to update statistics, x_clipped in partial_fit, is
+     untouched -- only which leaf receives it changes).
+  2. _find_leaf's nearest-centre fallback (for a point matching zero
+     children) was silent; now logs a warning if it ever fires -- with fix
+     (1) in place this should be unreachable except genuine float-precision
+     drift after many nested splits.
+  3. A cell's own s0/s1/s2/raw_count were left stale (not zeroed) when it
+     became an internal node via _split. Confirmed harmless before this
+     change (leaves()-gated code never reads them, and _merge_children
+     recomputes a node's stats fresh from its children's sums rather than
+     reading the stale parent value), but zeroed anyway as hygiene against
+     future code reading a node's stats without an is_leaf check.
+
+One test (test_moment_based_split_conserves_total_mass_exactly) asserted
+mass conservation by comparing sum(child.s0) to cell.s0 *after* _split
+returned -- relied on the now-fixed staleness from (3). Updated to capture
+the pre-split s0 in a local variable first; the invariant being tested
+(mass conservation) is unchanged, only how the test reads it.
+
+VERIFIED IMPACT, per "keeping the paper in sync": reran run_frontier_sweep.py
+(synthetic, continuous data) -- zero change in ari/nmi/purity/fraction_unassigned
+for any model, only timing/memory-measurement noise, confirming the bug
+never mattered for continuous synthetic streams (probability of landing
+exactly on a boundary is ~0). Reran run_real_data_frontier.py (kddcup99,
+covtype, sensor -- quantized/scaled real features, much more likely to hit
+exact grid boundaries) in the background (~53 min): real, non-noise changes,
+but confined *entirely* to AdaptiveDStream rows -- every FixedGridDStream
+and river-baseline row is unchanged (expected: FixedGridDStream's boundaries
+are fixed at construction and apparently don't coincide with the affected
+real-data quantization points the way AdaptiveDStream's data-dependent split
+boundaries do; river baselines don't use this tree code at all). Confirms
+the fix is doing exactly what it was supposed to: change specifically the
+cases where a point could straddle a live split boundary.
+
+Direction of the changes is mixed, not uniformly favorable or unfavorable
+(consistent with "this is a tie-break correctness fix," not a behavior
+change with a predictable direction): kddcup99 max_cells=2000/6000 and
+covtype max_cells=300/2000/6000 improve slightly; kddcup99 max_cells=300/800
+and sensor across all four cell budgets get slightly worse. Magnitudes are
+small (|delta ARI| <= 0.012 everywhere) except one: the degeneracy-check
+row (kddcup99, dim=10, max_cells=4000) moved from ARI 0.056 to 0.049, a
+~12% relative change -- large enough to update, still small enough that
+leaves stayed at exactly 3,070 in both runs (the split-count/structure is
+identical; only which points ended up in which of those leaves changed).
+The dim=12/15/20 degenerate-to-one-leaf rows are completely unchanged, as
+expected -- a single-cell "tree" has no internal boundary to disambiguate.
+
+UPDATED (both docs, values only, no prose restructuring beyond the ranges
+below): README's Real-Data Memory-Accuracy Frontier table (kddcup99
+max_cells=6000 ARI 0.132->0.133, 5496->5494 KB; covtype max_cells=6000 ARI
+0.004->0.006, 5495->5493 KB; sensor max_cells=2000 ARI 0.035->0.032), the
+"ARI roughly -0.03 to 0.13" summary range -> "-0.04 to 0.13" (new min is
+kddcup99 max_cells=300's -0.043, confirmed via full min/max scan across all
+AdaptiveDStream+FixedGridDStream real-data rows, not just the best-of-family
+table rows), and the Degeneracy table's dim=10 ARI (0.056->0.049). Same five
+edits mirrored in latex/main.tex Section 8.8. outputs/real_frontier_{ari,nmi}.png
+regenerated by the rerun itself and copied to latex/figures/. Recompiled
+clean: 28 pages (unchanged), no undefined references, no multiply-defined
+labels, changed page (19) visually spot-checked via pdftoppm (table renders
+correctly, not cut off). latex/output/adative_D_stream.pdf updated. Full
+test suite (38 tests) still passes.
+
+SEPARATE, PRE-EXISTING ISSUE NOTICED BUT NOT FIXED (out of scope for this
+session, flagged for later): the Real-Data table's covtype row reports
+AdaptiveDStream(max_cells=6000) as if it were the best-of-family config,
+but max_cells=300 actually has higher ARI (0.011 before this session's fix,
+0.0112 after) than max_cells=6000 (0.004 before, 0.006 after) on covtype
+specifically -- unlike kddcup99 and sensor, where the reported config
+genuinely is the best one. This predates and is unrelated to the p11 fix
+(confirmed: the ordering among covtype's four AdaptiveDStream configs is
+identical before and after). Worth deciding deliberately (fix the table to
+report max_cells=300, or document why max_cells=6000 was chosen instead --
+e.g. matching memory tier with the other datasets' reported rows) rather
+than leaving it as an apparent oversight.
+
+RECENCY-WEIGHTED MEMORY-FRONTIER PLOTS ADDED (same session, independent of
+the p11 fix above): run_frontier_sweep.py's plotting loop extended from two
+metrics (ari, nmi) to four (ari, nmi, ari_recent, nmi_recent) -- ari_recent/
+nmi_recent already existed on every EvalResult row but were previously only
+ever shown in the flat-vs-recent *bar* comparison (frontier_ari_flat_vs_recent.png),
+never plotted against memory the way the flat frontier is. New files
+outputs/frontier_{ari,nmi}_recent_vs_memory.png sit alongside (per explicit
+user choice, not replacing) frontier_{ari,nmi}_vs_memory.png. Wired into
+README's Recency-weighted results section and latex/main.tex's
+sec:recency-reeval (new Figure~\ref{fig:frontier-recent-memory}, two-panel).
+Recompiled clean, figure placement visually verified (landed on the page
+after the text referencing it, normal LaTeX float behavior for a busy
+page, not cut off).

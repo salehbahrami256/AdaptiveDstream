@@ -619,16 +619,16 @@ Every result above uses synthetic streams, where ground truth is exact but every
 Dataset & Model & Peak memory & ARI \\
 \midrule
 kddcup99 & FixedGrid $n{=}4$ & 3708~KB & 0.113 \\
-kddcup99 & \textbf{AdaptiveDStream} (max\_cells$=$6000) & 5496~KB & \textbf{0.132} \\
+kddcup99 & \textbf{AdaptiveDStream} (max\_cells$=$6000) & 5494~KB & \textbf{0.133} \\
 kddcup99 & DenStream & 33~KB & 0.393 \\
 kddcup99 & CluStream & 192~KB & 0.328 \\
 \addlinespace
 covtype & FixedGrid $n{=}3$ & 669~KB & 0.026 \\
-covtype & \textbf{AdaptiveDStream} (max\_cells$=$6000) & 5495~KB & \textbf{0.004} \\
+covtype & \textbf{AdaptiveDStream} (max\_cells$=$6000) & 5493~KB & \textbf{0.006} \\
 covtype & DBSTREAM & 50~KB & 0.038 \\
 \addlinespace
 sensor:shuttle & FixedGrid $n{=}3$ & 669~KB & 0.075 \\
-sensor:shuttle & \textbf{AdaptiveDStream} (max\_cells$=$2000) & 1800~KB & \textbf{0.035} \\
+sensor:shuttle & \textbf{AdaptiveDStream} (max\_cells$=$2000) & 1800~KB & \textbf{0.032} \\
 sensor:shuttle & DenStream & 28~KB & 0.423 \\
 \bottomrule
 \end{tabular}
@@ -648,9 +648,9 @@ sensor:shuttle & DenStream & 28~KB & 0.423 \\
 \label{fig:real-frontier-nmi}
 \end{figure}
 
-\textbf{On real data, neither grid method is competitive with the imported micro-cluster baselines, and \texttt{AdaptiveDStream} does not clearly outperform the fixed grid the way its memory advantage on synthetic noise dimensions (Section~\ref{sec:dim-sweep}) suggested it might.} Both \texttt{FixedGridDStream} and \texttt{AdaptiveDStream} score in a similar, weak, inconsistent range across all three datasets (ARI roughly $-0.03$ to $0.13$), while DenStream and DBSTREAM clear $0.34$--$0.42$ using $30$--$190\times$ less memory than \texttt{AdaptiveDStream}'s better-scoring configurations, on two of the three datasets (kddcup99, sensor). covtype is the exception where nothing scores well (best ARI anywhere is DBSTREAM's $0.038$), plausibly because the 7-class cartographic problem is not well suited to density-based clustering at all, independent of grid resolution or adaptivity.
+\textbf{On real data, neither grid method is competitive with the imported micro-cluster baselines, and \texttt{AdaptiveDStream} does not clearly outperform the fixed grid the way its memory advantage on synthetic noise dimensions (Section~\ref{sec:dim-sweep}) suggested it might.} Both \texttt{FixedGridDStream} and \texttt{AdaptiveDStream} score in a similar, weak, inconsistent range across all three datasets (ARI roughly $-0.04$ to $0.13$), while DenStream and DBSTREAM clear $0.34$--$0.42$ using $30$--$190\times$ less memory than \texttt{AdaptiveDStream}'s better-scoring configurations, on two of the three datasets (kddcup99, sensor). covtype is the exception where nothing scores well (best ARI anywhere is DBSTREAM's $0.038$), plausibly because the 7-class cartographic problem is not well suited to density-based clustering at all, independent of grid resolution or adaptivity.
 
-A degeneracy check on kddcup99 (\texttt{max\_cells}$=4000$) confirms the $2^d$-split-rule wall identified in Section~\ref{sec:dim-sweep} on real, not synthetic-noise, features: at dim$=10$, $2^{10}=1024 < 4000$ and \texttt{AdaptiveDStream} splits normally, reaching 3{,}070 leaves (ARI $0.056$); at dim$=12$, $2^{12}=4096 > 4000$, so \texttt{\_should\_split}'s admission check refuses the very first split and the entire reduced feature space remains one cell (leaves$=1$, ARI $0.001$) for the whole run, and stays that way at dim$=15$ and dim$=20$. This demonstrates the split-rule wall is not an artifact of the synthetic dimension sweep's isotropic-noise construction: a per-axis, rather than full-$2^d$-orthant, split rule is a hard prerequisite for this method to reach realistic feature counts (e.g.\ kddcup99's 38 numeric columns) at all, independent of any accuracy-side threshold fix.
+A degeneracy check on kddcup99 (\texttt{max\_cells}$=4000$) confirms the $2^d$-split-rule wall identified in Section~\ref{sec:dim-sweep} on real, not synthetic-noise, features: at dim$=10$, $2^{10}=1024 < 4000$ and \texttt{AdaptiveDStream} splits normally, reaching 3{,}070 leaves (ARI $0.049$); at dim$=12$, $2^{12}=4096 > 4000$, so \texttt{\_should\_split}'s admission check refuses the very first split and the entire reduced feature space remains one cell (leaves$=1$, ARI $0.001$) for the whole run, and stays that way at dim$=15$ and dim$=20$. This demonstrates the split-rule wall is not an artifact of the synthetic dimension sweep's isotropic-noise construction: a per-axis, rather than full-$2^d$-orthant, split rule is a hard prerequisite for this method to reach realistic feature counts (e.g.\ kddcup99's 38 numeric columns) at all, independent of any accuracy-side threshold fix.
 
 \subsection{Recency-Weighted Re-Evaluation}
 \label{sec:recency-reeval}

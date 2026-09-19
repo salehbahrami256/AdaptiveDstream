@@ -270,19 +270,19 @@ Reproduce with `python examples/run_dimension_sweep.py`.
 | Dataset | Model | Peak memory | ARI |
 |---|---|---:|---:|
 | kddcup99 | FixedGrid n=4 | 3708 KB | 0.113 |
-| kddcup99 | **AdaptiveDStream** (max_cells=6000) | **5496 KB** | **0.132** |
+| kddcup99 | **AdaptiveDStream** (max_cells=6000) | **5494 KB** | **0.133** |
 | kddcup99 | DenStream | 33 KB | **0.393** |
 | kddcup99 | CluStream | 192 KB | 0.328 |
 | covtype | FixedGrid n=3 | 669 KB | 0.026 |
-| covtype | **AdaptiveDStream** (max_cells=6000) | **5495 KB** | **0.004** |
+| covtype | **AdaptiveDStream** (max_cells=6000) | **5493 KB** | **0.006** |
 | covtype | DBSTREAM | 50 KB | 0.038 |
 | sensor:shuttle | FixedGrid n=3 | 669 KB | 0.075 |
-| sensor:shuttle | **AdaptiveDStream** (max_cells=2000) | **1800 KB** | **0.035** |
+| sensor:shuttle | **AdaptiveDStream** (max_cells=2000) | **1800 KB** | **0.032** |
 | sensor:shuttle | DenStream | 28 KB | **0.423** |
 
 (Best-of-family rows shown for readability; the full sweep — all four fixed-grid resolutions, all four `AdaptiveDStream` memory budgets, every river baseline, per dataset — is in `outputs/real_frontier_results.json`.)
 
-**On real data, neither grid method is competitive with the river micro-cluster baselines — and `AdaptiveDStream` does not obviously beat the fixed grid the way its memory advantage on synthetic noise dimensions ([Higher dimensions](#higher-dimensions)) suggested it might.** Across all three datasets, both `FixedGridDStream` and `AdaptiveDStream` score in a similar, weak, inconsistent range (ARI roughly -0.03 to 0.13), while DenStream and DBSTREAM clear 0.34-0.42 ARI on two of the three datasets (kddcup99, sensor) using 30-190× less memory than `AdaptiveDStream`'s better-scoring configurations. covtype is the exception where nothing scores well (best ARI anywhere is DBSTREAM's 0.038) — plausibly the 7-class cartographic problem isn't well suited to density-based clustering at all, real or synthetic, rather than a method-specific failure.
+**On real data, neither grid method is competitive with the river micro-cluster baselines — and `AdaptiveDStream` does not obviously beat the fixed grid the way its memory advantage on synthetic noise dimensions ([Higher dimensions](#higher-dimensions)) suggested it might.** Across all three datasets, both `FixedGridDStream` and `AdaptiveDStream` score in a similar, weak, inconsistent range (ARI roughly -0.04 to 0.13), while DenStream and DBSTREAM clear 0.34-0.42 ARI on two of the three datasets (kddcup99, sensor) using 30-190× less memory than `AdaptiveDStream`'s better-scoring configurations. covtype is the exception where nothing scores well (best ARI anywhere is DBSTREAM's 0.038) — plausibly the 7-class cartographic problem isn't well suited to density-based clustering at all, real or synthetic, rather than a method-specific failure.
 
 ### Degeneracy at realistic feature counts
 
@@ -290,7 +290,7 @@ The same `AdaptiveDStream` degenerates exactly as [Higher dimensions](#higher-di
 
 | dim | leaves | ARI |
 |---:|---:|---:|
-| 10 | 3,070 | 0.056 |
+| 10 | 3,070 | 0.049 |
 | 12 | 1 | 0.001 |
 | 15 | 1 | 0.001 |
 | 20 | 1 | 0.001 |
