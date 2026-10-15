@@ -1376,3 +1376,5 @@ OPEN: (1) coverage: a density rule relative to a micro-cluster's own radius so t
 cluster is assigned without lowering the noise bar; (2) streaming-adaptive init_radius from
 the running per-dimension scale; (3) re-read old grid tables with ari_assigned;
 (4) peak memory is 5-20x DBSTREAM's (partly transient cdist matrices at checkpoints).
+
+PDF: latex/main.pdf recompiled 2026-10-15 (tectonic, 32 pages, no undefined/multiply-defined refs; new tables/figures spot-checked on pages 24-26). Earlier attempts failed only on tectonic font downloads (network); retries eventually cached the fonts.
