@@ -35,9 +35,13 @@ import json
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import numpy as np
+from river import cluster as river_cluster
 
 from adaptive_dstream import (
     AdaptiveDStream,
+    AdaptiveRadiusMC,
+    RiverClusterAdapter,
     FixedGridDStream,
     make_varying_density_stream,
     run_stream_eval,
@@ -131,11 +135,36 @@ def main() -> None:
               f"peak_mem={r.peak_memory_bytes/1024:.1f}KB  unassigned={r.fraction_unassigned:.2f}  "
               f"leaves={n_leaves}{degenerate}")
 
+        # Branch adaptive-radius-microclusters. The generator draws every
+        # coordinate with the same per-axis std, so within-cluster distances
+        # grow like sqrt(dim): both distance-scale knobs are scaled by
+        # sqrt(dim/2) from their 2D frontier-sweep values (r0=0.4, DBSTREAM
+        # threshold 1.2) -- the same rule for the new model and its control.
+        # No cell-count blow-up exists to avoid here: cost is linear in dim.
+        scale = float(np.sqrt(dim / 2.0))
+        mc_factory = lambda sc=scale: AdaptiveRadiusMC(init_radius=0.4 * sc, max_radius=3.0 * sc, max_micro=500,
+                                                      maintenance_interval=50)
+        r = run_stream_eval(mc_factory, X, y, phase=phase, name="AdaptiveRadiusMC", eval_decay=EVAL_DECAY)
+        results.append({**r.to_dict(), "family": "AdaptiveRadiusMC", "dim": dim, "n_cells_per_dim": None,
+                         "total_cells": r.active_cells_over_time[-1][1]})
+        log.info(f"dim={dim:>2}  AdaptiveRadiusMC             ARI={r.ari:.3f}  ARI_recent={r.ari_recent:.3f}  "
+                 f"peak_mem={r.peak_memory_bytes/1024:.1f}KB  unassigned={r.fraction_unassigned:.2f}  "
+                 f"micro={r.active_cells_over_time[-1][1]}")
+        dbs_factory = lambda sc=scale: RiverClusterAdapter(
+            river_cluster.DBSTREAM(clustering_threshold=1.2 * sc, fading_factor=0.01,
+                                   cleanup_interval=2, intersection_factor=0.3), name="DBSTREAM(scaled th)")
+        r = run_stream_eval(dbs_factory, X, y, phase=phase, name="DBSTREAM(scaled th)", eval_decay=EVAL_DECAY)
+        results.append({**r.to_dict(), "family": "DBSTREAM_scaled", "dim": dim, "n_cells_per_dim": None,
+                         "total_cells": r.active_cells_over_time[-1][1]})
+        log.info(f"dim={dim:>2}  DBSTREAM(scaled th)          ARI={r.ari:.3f}  ARI_recent={r.ari_recent:.3f}  "
+                 f"peak_mem={r.peak_memory_bytes/1024:.1f}KB")
+
     OUTPUT_DIR.mkdir(exist_ok=True)
     with open(OUTPUT_DIR / "dimension_sweep_results.json", "w") as f:
         json.dump(results, f, indent=2, default=lambda o: o.tolist() if hasattr(o, "tolist") else o)
 
-    series = [("AdaptiveDStream", "tab:red", "*", 12), ("FixedGrid(budget-matched)", "tab:blue", "o", 7)]
+    series = [("AdaptiveDStream", "tab:gray", "*", 12), ("FixedGrid(budget-matched)", "tab:blue", "o", 7),
+              ("AdaptiveRadiusMC", "tab:red", "D", 7), ("DBSTREAM(scaled th)", "tab:purple", "v", 7)]
 
     for metric, ylabel, fname, use_log_scale in [
         ("peak_memory_bytes", "Peak memory (bytes)", "dimension_sweep_memory.png", True),

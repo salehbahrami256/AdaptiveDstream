@@ -15,7 +15,13 @@ If your two clusters happen to have similar density and never move, you'll never
 
 ## Status
 
-This is a week-1, v0 research prototype, not a finished method. The core online-update/split/prune/cluster loop works and is tested (idle pruning was silently inert until 2026-09-19, see [Known limitations](#known-limitations)); the evaluation harness now exists and the first frontier-sweep results are in (see [Results](#results-so-far)) — and they surface a real, documented limitation (see [Known limitations](#known-limitations)), not a finished win over the baselines. Treat numbers here as a snapshot from `git log`, not a claim.
+This is a research prototype, not a finished method, and this branch (`adaptive-radius-microclusters`) records a change of direction. The grid-based `AdaptiveDStream` (split/contract/prune/cluster loop, tested) is dominated by a plain fixed grid and by DBSTREAM at every memory budget, and has a `2**d` wall that makes it unusable past ~10 dimensions. This branch adds a second method, **`AdaptiveRadiusMC`** — adaptive-radius micro-clusters ([Method](#adaptive-radius-micro-clusters-this-branch)) — keeps the same harness, streams and baselines, and re-runs every experiment. Short version of what that showed:
+
+- It removes the `2**d` wall (works at dim 10–20, bounded memory, linear cost in `d`) and is **stable at scale**: 10k→400k points, ~100 micro-clusters at every length, flat ~32k points/s, windowed ARI flat or improving.
+- Its headline ARI on the synthetic stream (0.75, vs 0.05 for the grid method and 0.27 for the best DBSTREAM) is **largely an artifact of how unassigned points are scored**, as the new assigned-only ARI check shows (see [Honesty check](#honesty-check-the-unassigned-points-convention-flatters-some-models)). Once that is accounted for it is not clearly better than DBSTREAM, and on real data it does not beat DenStream/DBSTREAM (except covtype, where every method is near zero).
+- That check also applies to the *old* results: the fixed grid's "win" at n=32 (ARI 0.669, assigned-only ARI 0.067) is the same artifact.
+
+Treat numbers here as a snapshot from `git log`, not a claim.
 
 ## Install
 
@@ -337,8 +343,113 @@ All four synthetic sweeps above were re-run with `eval_decay=0.99` (see [Recency
 
 Full numbers in `outputs/{frontier,regime_sweep,split_strategy,dimension_sweep}_results.json` (`ari_recent`/`nmi_recent`/`decayed_purity`/`recent_window` fields). Reproduce by re-running any `examples/run_*.py` sweep script — `EVAL_DECAY = 0.99` is now on by default in all four.
 
+## Adaptive-radius micro-clusters (this branch)
+
+### Why a different mechanism
+
+The grid method's idea — resolution that follows local density — was sound, but the mechanism (halving cells) fragments a region's mass across `2**d` children, makes the dense threshold resolution-dependent, and is exponential in `d`. `AdaptiveRadiusMC` ([microcluster.py](src/adaptive_dstream/microcluster.py)) keeps the idea and changes the mechanism. It is a DBSTREAM-family method (a bounded set of decayed micro-clusters), with one difference: DBSTREAM has **one global radius**, so it has the grid's flaw in milder form (a small radius shatters a broad cluster into many weak micro-clusters, a large one swallows a tight cluster). Here the radius is **per micro-cluster and local**. It is therefore *not* a new paradigm — it is "DBSTREAM with a local radius", and the experiments below test exactly that one hypothesis, with DBSTREAM swept over its global threshold as the control.
+
+### Method
+
+- **State.** Per micro-cluster: decayed count `s0`, sum `s1`, sum of squares `s2` (the same sufficient statistics as `GridCell`), decayed by `decay ** dt`. Center = `s1/s0`.
+- **Local radius.** `radius = clip(radius_scale * sigma_eff, min_radius, max_radius)`, where `sigma_eff²` is the micro-cluster's own per-dimension variance shrunk toward a prior `(init_radius/radius_scale)²` with pseudo-count `prior_weight`. A new micro-cluster starts at about `init_radius`; as it absorbs points its radius moves to its own data scale — shrinking where the data is tight (the analogue of a split, with no mass fragmentation) and growing where it is broad.
+- **Insert.** A point is absorbed by the nearest micro-cluster whose radius contains it, else it starts a new one.
+- **Maintenance** (every `maintenance_interval` points): prune micro-clusters below `sparse_weight`; merge pairs closer than `merge_factor * min(radius)` (statistics are additive); if still over `max_micro`, drop the lightest — **memory is bounded by construction**.
+- **Clustering.** At the same checkpoints (so the 50-point cold start is shared with the grid models): micro-clusters with `s0 >= dense_weight` are connected when their centers are within `connect_factor * (r_i + r_j)`; connected components are clusters; light micro-clusters attach to the nearest reachable dense one; the rest are unassigned (`None`). Prediction = nearest micro-cluster (in radius units, within `assign_tolerance`).
+- **Cost.** `O(m·d)` per point for `m` micro-clusters; no `2**d` anywhere. Pairwise work at checkpoints uses `scipy.spatial.distance.cdist`.
+- **The one scale knob.** `init_radius` (like DBSTREAM's `clustering_threshold`, and unlike the grid methods) is in data units, so it must be told the data scale. Everything below sweeps it, for both methods, instead of tuning it per experiment.
+
+### Results
+
+All on the same streams/harness as the rest of this README. Hyperparameters other than the swept one are fixed (`radius_scale=2.5`, `dense_weight=3`, `decay=0.99`, `max_micro=500`).
+
+**Frontier stream** (`varying_density`, n=2000, seed 7; `outputs/frontier_results.json`, figures `outputs/frontier_*_vs_memory.png`). `ARI*` is the assigned-only ARI (see next subsection); `unas.` is the fraction unassigned.
+
+| Model | Peak mem | ARI | ARI* | unas. |
+|---|---:|---:|---:|---:|
+| AdaptiveRadiusMC r0=2.0 | 18 KB | 0.000 | -0.001 | 0.03 |
+| AdaptiveRadiusMC r0=1.2 | 52 KB | 0.038 | 0.014 | 0.11 |
+| AdaptiveRadiusMC r0=0.8 | 102 KB | 0.337 | 0.188 | 0.33 |
+| AdaptiveRadiusMC r0=0.6 | 166 KB | 0.540 | 0.026 | 0.45 |
+| **AdaptiveRadiusMC r0=0.4** | **282 KB** | **0.749** | **0.125** | **0.49** |
+| AdaptiveRadiusMC r0=0.3 | 335 KB | 0.742 | 0.001 | 0.50 |
+| AdaptiveRadiusMC r0=0.2 | 420 KB | 0.704 | 0.008 | 0.54 |
+| AdaptiveRadiusMC r0=0.15 | 522 KB | 0.604 | -0.010 | 0.58 |
+| DBSTREAM th=0.6 / 0.8 / 1.0 / **1.2** | 22–29 KB | 0.236 / 0.251 / 0.262 / **0.271** | same | 0.00 |
+| DBSTREAM th=0.2 / 0.4 / 1.6 / 2.0 | 20–28 KB | 0.032 / 0.069 / 0.025 / 0.029 | same | 0.00 |
+| DBSTREAM (default th=0.5) | 23 KB | 0.236 | 0.236 | 0.00 |
+| AdaptiveDStream (grid) | 304 KB | 0.050 | 0.023 | 0.19 |
+| FixedGrid n=32 / n=45 | 814 / 1609 KB | 0.669 / 0.796 | 0.067 / 0.302 | 0.50 / 0.53 |
+
+Read honestly: on the headline ARI the new model beats the grid method (0.749 vs 0.050) and every DBSTREAM setting (best 0.271) — but it uses 10–20× DBSTREAM's memory (282 KB vs 25 KB; part of that is transient `cdist`/adjacency matrices at checkpoints, counted by `tracemalloc`), and ~half its points are unassigned.
+
+### Honesty check: the unassigned-points convention flatters some models
+
+`run_stream_eval` scores unassigned points as one extra "noise" cluster (standard for density methods — see [Unassigned points](#unassigned-points-the-scoring-rule-decided-and-documented)). On this stream the broad cluster is ~half the points; a model that only clusters the tight cluster and leaves the broad one unassigned gets that "noise" cluster to coincide with the true second cluster, and a high ARI for it. The harness now also reports **`ari_assigned`**: ARI over only the points the model assigned. It exposes this directly: at r0=0.3, ARI 0.742 but ARI* 0.001. A `dense_weight` ablation at r0=0.4 shows the trade (ARI / ARI* / unassigned): `dense_weight=3` 0.749 / 0.125 / 0.49; `1.5` 0.501 / 0.394 / 0.39; `0.8` 0.156 / 0.144 / 0.21. So covering more of the broad cluster costs headline ARI, and even the best assigned-only value (0.394, at 61% coverage) is not clearly better than DBSTREAM th=1.2 (0.271 at 100% coverage). **The honest conclusion on the 2D frontier stream is "comparable to DBSTREAM, not clearly better", not the 0.749 vs 0.271 the headline suggests.** The same artifact affects the old grid results (FixedGrid n=32: ARI 0.669, ARI* 0.067), which the earlier version of this README presented as "the fixed grid wins".
+
+### Across regimes (n=500, seed 7, nothing retuned per regime)
+
+`AdaptiveRadiusMC` r0=0.4; DBSTREAM th=1.2 (its best on the frontier stream — both selected on the frontier stream, not per regime). Cells: ARI (ARI*, unassigned). `outputs/regime_sweep_results.json`, `outputs/regime_sweep_ari.png`.
+
+| Regime | AdaptiveRadiusMC | DBSTREAM th=1.2 | DenStream | FixedGrid n=8 | FixedGrid n=32 | AdaptiveDStream |
+|---|---:|---:|---:|---:|---:|---:|
+| static_no_drift | **0.781** (1.00, 0.56) | 0.599 | 0.542 | 0.539 | 0.626 (0.00, 0.58) | 0.084 |
+| spatial_drift | 0.437 (0.01, 0.62) | 0.019 | 0.064 | 0.033 | **0.512** (0.56, 0.62) | 0.016 |
+| density_drift | 0.378 (1.00, 0.69) | 0.492 | **0.611** | 0.604 | 0.242 | 0.053 |
+| two_gaussian_drift | 0.033 (0.12, 0.47) | 0.351 | **0.384** | 0.386 | 0.003 | 0.057 |
+| moons_drift | 0.006 (0.20, 0.83) | 0.037 | 0.043 | 0.005 | 0.001 | 0.015 |
+
+It wins two of five on headline ARI and loses on `density_drift`, `two_gaussian_drift`, `moons_drift`. In the two it wins, ARI* is 1.00 on `static_no_drift` (perfect on the points it assigns, ~44% of them) and ≈0 on `spatial_drift` (headline = convention artifact). Non-convex `moons_drift` is still not solved by anything.
+
+### Dimension (synthetic, noise dimensions beyond the first two) and the `2**d` wall
+
+Both distance scales (new model's `init_radius`, DBSTREAM's threshold) scale by `sqrt(dim/2)`. `outputs/dimension_sweep_results.json`.
+
+| dim | AdaptiveRadiusMC ARI | micro | mem | DBSTREAM (scaled) ARI | FixedGrid (budget-matched) ARI | AdaptiveDStream (grid) ARI |
+|---:|---:|---:|---:|---:|---:|---:|
+| 2 | 0.341 | 87 | 273 KB | 0.057 | 0.304 | 0.019 |
+| 4 | 0.404 | 133 | 437 KB | 0.097 | 0.363 | 0.004 |
+| 6 | 0.320 | 142 | 494 KB | 0.024 | 0.482 | 0.071 |
+| 8 | 0.304 | 149 | 547 KB | 0.218 | 0.441 | 0.229 |
+| 12 | 0.227 | 149 | 557 KB | 0.045 | 0.205 | −0.000 (1 leaf) |
+| 20 | 0.339 | 133 | 525 KB | 0.082 | skipped (cell cap) | −0.001 (1 leaf) |
+
+Memory and micro-cluster count are flat in `dim` (the grid method's cost is exponential and it collapses to one leaf at `dim ≥ 12`). Caveat: ARI* is ≈0 in nearly every row, so these ARIs again mostly reflect the convention.
+
+### Real data (dim=6, n≈8000; `outputs/real_frontier_results.json`)
+
+`init_radius` and DBSTREAM's threshold swept over the same values {0.05, 0.1, 0.2, 0.35, 0.5} (features are scaled to [0,1]⁶). Best ARI per family (ARI* in parentheses):
+
+| Dataset | AdaptiveRadiusMC | DBSTREAM (swept) | DenStream | CluStream | grid AdaptiveDStream | FixedGrid |
+|---|---:|---:|---:|---:|---:|---:|
+| kddcup99 | 0.159 (0.068) @351 KB | 0.134 | **0.393** | 0.328 | 0.147 | 0.085 |
+| covtype | 0.058 (0.051) @273 KB | 0.038 | 0.001 | 0.018 | 0.034 | 0.019 |
+| sensor | 0.319 (0.094) @45 KB | 0.341 | **0.423** | −0.003 | 0.002 | 0.062 |
+
+It does **not** beat DenStream/DBSTREAM on real data (best: covtype, where everything is near zero). It is clearly better than the grid methods on sensor (0.319 vs 0.062) and about equal on kddcup99 (0.159 vs 0.147; ARI* 0.068 vs 0.094 — no better). **Degeneracy check (kddcup99, dim 10/12/15/20):** it runs at every dimension with 52–63 micro-clusters and 200–290 KB (ARI 0.17–0.20), where the grid `AdaptiveDStream` stays a single leaf for `dim ≥ 12`. (The one-cell null baseline is ARI 0.074 — see the old degeneracy table — so these rows are above the null but not strong evidence.)
+
+### Scale and stability (`examples/run_scale_test.py`, `outputs/scale_test_results.json`)
+
+n ∈ {10k, 100k, 400k} points, drift phases of ~5000 points (3 → 80 phases), 3 seeds, **no `tracemalloc`** (throughput is not comparable to the other sweeps'). Mean over seeds of per-window (5000-point) prequential ARI:
+
+| n | model | window ARI (±sd across seeds) | assigned-only | unassigned | first→last quarter | max micro-clusters | pts/s |
+|---:|---|---:|---:|---:|---:|---:|---:|
+| 10k | AdaptiveRadiusMC | 0.874 ± 0.006 | 0.146 | 0.49 | 0.864 → 0.883 | 98 / 92 / 91 | 32.4k |
+| 10k | DBSTREAM th=1.2 | 0.253 ± 0.007 | 0.253 | 0.00 | 0.285 → 0.221 | 10 / 8 / 7 | 36.0k |
+| 100k | AdaptiveRadiusMC | 0.947 ± 0.003 | 0.445 | 0.50 | 0.954 → 0.942 | 102 / 101 / 98 | 32.5k |
+| 100k | DBSTREAM th=1.2 | 0.383 ± 0.039 | 0.383 | 0.00 | 0.594 → 0.289 | 7 / 7 / 8 | 32.8k |
+| 400k | AdaptiveRadiusMC | 0.987 ± 0.000 | 0.973 | 0.50 | 0.986 → 0.988 | 103 / 101 / 105 | 32.4k |
+| 400k | DBSTREAM th=1.2 | 0.587 ± 0.019 | 0.587 | 0.00 | 0.601 → 0.607 | 10 / 9 / 9 | 27.6k |
+
+What this supports: model size is **bounded** (~100 micro-clusters from 10k to 400k points, not growing), throughput is **constant** (~32k pts/s, no degradation with stream length), and accuracy does **not decay** (first vs last quarter equal) — on this stream family, 2D, up to 400k points, 3 seeds. What it does not support: any claim past 400k points, in high dimension, or on real streams at this length (those are 8k-point runs above). Note the assigned-only ARI rises with `n` (0.146 → 0.973) while coverage stays ~50% — with more data the model assigns the same half of the stream but increasingly correctly.
+
+Reproduce: `python examples/run_frontier_sweep.py`, `run_regime_sweep.py`, `run_dimension_sweep.py`, `run_real_data_frontier.py`, `run_scale_test.py` (all write to `outputs/`).
+
 ## Known limitations
 
+- **(this branch) The headline ARI over-rewards models that leave a real cluster unassigned.** Unassigned points are scored as one noise cluster (documented convention). `ari_assigned` now makes the effect visible; it shows the 2D synthetic wins of `AdaptiveRadiusMC` and of the large fixed grids are largely this effect. Every ARI in the pre-branch sections of this README (frontier table, regime table, dimension table, recency tables) is the headline version; the grid-vs-baseline orderings there should be re-read with `ari_assigned` and `fraction_unassigned` alongside (`outputs/*.json` have both).
+- **(this branch) `AdaptiveRadiusMC` needs the data scale** (`init_radius`, like DBSTREAM's threshold); results are swept, not auto-tuned, and its two-regime wins don't extend to `density_drift`, `two_gaussian_drift`, `moons_drift` or real data. Its peak memory (100–500 KB) is 5–20× DBSTREAM's. Not tested beyond 400k points, beyond one stream family at scale, or beyond dim 20.
+- **Not re-run on this branch:** `run_split_strategy_sweep.py` and `run_cell_equidistribution_sweep.py` are about the grid method's internals and are unchanged in method; the split-strategy sweep was re-run only to add `ari_assigned` to its JSON.
 - **Dense-threshold is an absolute decayed count, not normalized by cell volume — and the obvious fix for this was tried and made things worse, not better.** Splitting a cell fragments its mass across `2**d` smaller children; a region can be genuinely dense (high mass *per unit volume*) while every individual fine cell covering it holds too little raw count to cross `dense_threshold`, because that same mass is now divided among many more cells. `AdaptiveDStream(density_normalize=True)` (default `False`) implements the direct fix — compare `s0 * (domain_volume / cell.volume)` against the thresholds instead of raw `s0` — but a probe across a 32× threshold range found it drops ARI to ~0 (chance) at every setting on the headline stream, because the scale factor grows as `2**(dim*level)` and overshoots by orders of magnitude well before `max_depth`, flooding the tree with spurious "dense" cells. See `research_notes.txt` for the full diagnosis and untried follow-ups (damped/capped scaling). **Not adopted; `density_normalize` stays off by default.**
 - **A split cell's own `GridCell` object is only freed if it later contracts, and this is now measured, not just estimated.** `_split` gives `cell` children but keeps `cell` itself alive in the tree, still holding its own (now-stale) `s0`/`s1`/`s2` arrays; `_contract_recursive` (see [Method](#method)) reclaims this by aggregating the children back into the parent when it merges — but only for cells that actually satisfy the merge criterion. A direct instrumented comparison on the frontier-sweep stream/config: without contraction, 754 leaves / 1005 total live `GridCell` objects (251 retired parents, ~25% dead weight); with contraction, 637 leaves / 849 total objects (212 retired parents, still ~25%) — contraction reduces total live cells by ~15% but does not eliminate the underlying issue for cells whose children keep legitimately deviating from the uniform assumption (i.e. real, persistent structure), which never satisfy the merge criterion.
 - **All three split-mass-redistribution strategies (`split_strategy="equal_uniform"|"point_mass"|"moment_based"`, see [Method](#method)) are now benchmarked against each other** — see [Split-strategy comparison](#split-strategy-comparison). None gets `AdaptiveDStream` close to the fixed-grid or river baselines; the choice among them is a second-order effect next to the dense-threshold issue above.
@@ -356,6 +467,7 @@ Full numbers in `outputs/{frontier,regime_sweep,split_strategy,dimension_sweep}_
 src/adaptive_dstream/
   cell.py          GridCell: sufficient statistics, decay, refinement score, state
   model.py         AdaptiveDStream: split/prune/cluster/predict loop
+  microcluster.py  AdaptiveRadiusMC: adaptive-radius micro-clusters (this branch's method)
   baselines.py     FixedGridDStream + RiverClusterAdapter (DenStream/CluStream/DBSTREAM)
   synthetic.py     Stream generators + reproducible save/load
   evaluation.py    Prequential eval harness: ARI/NMI/purity/memory/throughput
@@ -367,6 +479,7 @@ examples/
   run_frontier_sweep.py  The evaluation in this README
   run_regime_sweep.py    Same models/hyperparameters across 5 data regimes (see "Results across regimes")
   run_dimension_sweep.py Memory/accuracy vs. dimension (see "Higher dimensions")
+  run_scale_test.py      10k-400k-point stability test (memory bound, throughput, windowed ARI)
   run_real_data_frontier.py  Same frontier evaluation on three real datasets (see "Real-Data Memory-Accuracy Frontier")
 tests/
 data/          generated streams: {name}.npz (arrays) + {name}.json (seed/params manifest), committed
@@ -375,5 +488,7 @@ logs/          per-run timestamped logs (gitignored — see CLAUDE.md's "Logging
 ```
 
 ## Contributing / next steps
+
+**On this branch** the work is intentionally stopped at an evaluated, honestly-reported state. If it is picked up again, in order: (1) make coverage a first-class objective (the `dense_weight` trade above) — e.g. a density rule relative to the micro-cluster's radius so the broad cluster is assigned without lowering the bar for noise; (2) report `ari_assigned` + coverage everywhere and re-read the old grid tables with it; (3) a streaming-friendly adaptive `init_radius` (from the running per-dimension scale) to remove the one tuned knob; (4) ellipsoidal (covariance) micro-clusters for non-convex/anisotropic shapes. The paragraph below is the pre-branch plan for the grid method, kept for history.
 
 See [Known limitations](#known-limitations) for the ranked list. Density-normalized dense/sparse thresholds — previously the top item here — were implemented and tried (`AdaptiveDStream(density_normalize=True)`) and made ARI worse, not better; see that bullet in [Known limitations](#known-limitations) and `research_notes.txt` for the diagnosis. With the real-data run in ([Real-Data Memory-Accuracy Frontier](#real-data-memory-accuracy-frontier)) now confirming the `2**d`-split-rule wall on real features, not just synthetic noise dimensions, that wall — a per-axis rather than full-orthant split rule — is the current top priority: it's the hard prerequisite for reaching realistic feature counts (kddcup99's 38 numeric columns, say) at all, independent of any accuracy-side fix. Freeing a split cell's own storage once it has children remains the other standing item. Both should be re-evaluated against the real-data frontier above, not just the synthetic sweeps, once implemented.

@@ -1291,3 +1291,88 @@ BACKLOG FOR TOMORROW:
     runs take seconds.
  4. p21 throughput table; re-measure the "retired parents" instrumented
     comparison (README/paper still cite pre-fix numbers, flagged as such).
+
+
+================================================================
+22. BRANCH adaptive-radius-microclusters (2026-10-15): NEW METHOD AdaptiveRadiusMC, FULL RE-RUN, ASSIGNED-ONLY ARI
+================================================================
+Context: user concluded the grid AdaptiveDStream "is not working well" (dominated
+by fixed grid and DBSTREAM at every budget; 2**d wall at dim>=12) and asked to try
+a different mechanism on a new git branch, updating code/README/paper/tests and
+reporting performance again. NOT a plan item p1-p29/a1-a17 (no plan artifact was
+consulted); a deliberate change of direction.
+
+WHAT WAS BUILT (src/adaptive_dstream/microcluster.py, class AdaptiveRadiusMC):
+bounded set of decayed micro-clusters (s0,s1,s2, same statistics as GridCell) with a
+PER-MICRO-CLUSTER radius r_i = clip(2.5*sigma_eff_i, r_min, r_max), sigma_eff^2 = the
+cluster's own variance shrunk toward (init_radius/2.5)^2 with pseudo-count 3.
+Absorb nearest-in-radius else spawn; maintenance every 50 points = prune (weight<0.1),
+merge overlapping (<0.5*min radius), cap at max_micro=500; clustering at checkpoints
+= components over dense (s0>=3) micro-clusters connected when dist<=r_i+r_j, light
+ones border-attached. Honest framing: this is DBSTREAM with a local radius, NOT a new
+paradigm; the experiments test only that hypothesis, with DBSTREAM swept over its
+global clustering_threshold as the control. 12 unit tests (tests/test_microcluster.py).
+Peak memory first measured 441KB, reduced to 282KB by replacing m*m*d broadcast
+tensors with scipy cdist (same ARI).
+
+HARNESS CHANGE: EvalResult.ari_assigned = ARI over only points with pred != -1
+(+ test). Reason below.
+
+KEY FINDING 1 (most important, applies to OLD results too): the headline ARI scores
+unassigned points as one noise cluster. On varying_density the broad cluster is half
+the stream, so a model that clusters only the tight cluster and leaves the broad one
+unassigned gets high ARI. AdaptiveRadiusMC frontier: ARI 0.749 but ari_assigned 0.125
+(r0=0.4, 49% unassigned); r0=0.3: 0.742 vs 0.001. FixedGrid n=32: 0.669 vs 0.067;
+n=45: 0.796 vs 0.302. So the earlier "fixed grid wins the frontier" is largely this
+artifact. dense_weight ablation (r0=0.4): dw=3 0.749/0.125/un0.49; 1.5 0.501/0.394/0.39;
+0.8 0.156/0.144/0.21. Best assigned-only (0.394 @61% coverage) is NOT clearly better
+than DBSTREAM th=1.2 (0.271 @100%). I stopped tuning there on purpose (one stream, one
+seed; more tuning = fitting). README/paper old sections were NOT rewritten, only
+flagged; their orderings should be re-read with ari_assigned + fraction_unassigned.
+
+FINDING 2 (the control): DBSTREAM global threshold sweep peaks at ARI 0.271 (th=1.2),
+collapses at 0.2/0.4/1.6/2.0 (0.03-0.07). The local-radius model is much more robust to
+its scale knob over r0 in 0.15-0.4 on headline ARI, but see finding 1.
+
+FINDING 3 (regimes, fixed hyperparameters from the frontier stream): wins
+static_no_drift (0.781; ari_assigned 1.00 at 44% coverage) and spatial_drift (0.437, but
+ari_assigned 0.01); loses density_drift, two_gaussian_drift, moons_drift. Moons unsolved.
+
+FINDING 4 (dimension / 2**d wall): works at dim 2-20 with ~90-150 micro-clusters and
+flat 270-560KB memory; grid AdaptiveDStream is 1 leaf for dim>=12. kddcup99 dim 10-20:
+52-63 micro, 200-290KB, ARI 0.17-0.20 (null for one cell is 0.074). Synthetic-dim ARI*
+is ~0 almost everywhere, so those ARIs mostly reflect the convention.
+
+FINDING 5 (real data, dim 6, n~8000): does not beat DenStream/DBSTREAM except covtype
+(everything ~0). kddcup99 0.159 (ARI* 0.068) vs DenStream 0.393; sensor 0.319 vs
+DenStream 0.423, DBSTREAM sweep 0.341; clearly better than grid on sensor, ~equal on
+kddcup99. Real-data first attempt failed on SSL for the sensor download (certifi missing
+in the venv); fixed by `pip install certifi` and rerun.
+
+FINDING 6 (scale, examples/run_scale_test.py, answers "does it stay stable on huge
+data?"): n=10k/100k/400k, phases of ~5000 pts (up to 80 phases), 3 seeds, no tracemalloc.
+Max micro-clusters ~91-105 at every n (bounded), throughput ~32.4k pts/s at every n
+(constant; DBSTREAM 27.6-36.0k), windowed ARI first->last quarter 0.864->0.883 /
+0.954->0.942 / 0.986->0.988 (no decay; sd across seeds <=0.006), assigned-only ARI rises
+0.146 -> 0.445 -> 0.973 at constant ~50% coverage. LIMITS: 2D synthetic only, <=400k
+points, 3 seeds; real streams at that length and high-dim at scale are NOT tested.
+
+RE-RUNS DONE (all on this branch): run_frontier_sweep, run_regime_sweep,
+run_dimension_sweep, run_split_strategy_sweep (only adds ari_assigned; grid numbers
+unchanged: grid results reproduced exactly), run_real_data_frontier, run_scale_test (new).
+NOT re-run: run_cell_equidistribution_sweep.py, run_2d_drift.py (grid internals/
+visualization; the method they exercise did not change).
+
+DOCS: README (Status, new "Adaptive-radius micro-clusters" section, Known limitations,
+layout), latex/main.tex (abstract note, contribution bullets, new subsection
+sec:mc-method, new results subsection sec:mc-results, Summary/Discussion/Conclusion),
+CLAUDE.md (architecture + commands), figures copied to latex/figures/.
+
+IDEAS NOT BUILT (considered): ellipsoidal (covariance) micro-clusters; adaptive-bandwidth
+KDE + density peaks; online GMM; per-axis-split grid. Note DBSTREAM is not "the best"
+stream clusterer: DenStream beat it on kddcup99 and sensor here.
+
+OPEN: (1) coverage: a density rule relative to a micro-cluster's own radius so the broad
+cluster is assigned without lowering the noise bar; (2) streaming-adaptive init_radius from
+the running per-dimension scale; (3) re-read old grid tables with ari_assigned;
+(4) peak memory is 5-20x DBSTREAM's (partly transient cdist matrices at checkpoints).
