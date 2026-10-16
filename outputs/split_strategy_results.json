@@ -8,8 +8,8 @@
     "fraction_unassigned": 0.12125,
     "ari_assigned": 0.03817244988917707,
     "peak_memory_bytes": 60653,
-    "elapsed_seconds": 0.03601841700037767,
-    "throughput_pts_per_sec": 22210.859516441593,
+    "elapsed_seconds": 0.03195529200093006,
+    "throughput_pts_per_sec": 25034.976991501626,
     "ari_by_phase": {
       "0": 0.5810742718627211,
       "1": 0.014911266067716224,
@@ -65,9 +65,9 @@
     "purity": 0.895,
     "fraction_unassigned": 0.57875,
     "ari_assigned": 0.01782842976376025,
-    "peak_memory_bytes": 830400,
-    "elapsed_seconds": 0.09374324999953387,
-    "throughput_pts_per_sec": 8533.947777615753,
+    "peak_memory_bytes": 830496,
+    "elapsed_seconds": 0.0832799170002545,
+    "throughput_pts_per_sec": 9606.157508508986,
     "ari_by_phase": {
       "0": 0.49350520487998056,
       "1": 0.3779510386051745,
@@ -123,9 +123,9 @@
     "purity": 0.66375,
     "fraction_unassigned": 0.1225,
     "ari_assigned": 0.027935257947555813,
-    "peak_memory_bytes": 264936,
-    "elapsed_seconds": 0.47907641700021486,
-    "throughput_pts_per_sec": 1669.8797344467098,
+    "peak_memory_bytes": 265128,
+    "elapsed_seconds": 0.4507188749994384,
+    "throughput_pts_per_sec": 1774.9423074438514,
     "ari_by_phase": {
       "0": 0.17207953089697856,
       "1": 0.01965040447831542,
@@ -182,8 +182,8 @@
     "fraction_unassigned": 0.37875,
     "ari_assigned": 0.013164260836899167,
     "peak_memory_bytes": 365130,
-    "elapsed_seconds": 0.5463709169998765,
-    "throughput_pts_per_sec": 1464.2067780488778,
+    "elapsed_seconds": 0.5069461250004679,
+    "throughput_pts_per_sec": 1578.0769603461545,
     "ari_by_phase": {
       "0": 0.08955921295161363,
       "1": 0.03206480655468356,
@@ -239,9 +239,9 @@
     "purity": 0.66625,
     "fraction_unassigned": 0.16,
     "ari_assigned": 0.024988191552464314,
-    "peak_memory_bytes": 336932,
-    "elapsed_seconds": 0.6743037910000567,
-    "throughput_pts_per_sec": 1186.4088719025647,
+    "peak_memory_bytes": 338824,
+    "elapsed_seconds": 0.6360987080006453,
+    "throughput_pts_per_sec": 1257.6664438048008,
     "ari_by_phase": {
       "0": 0.1079225226049378,
       "1": 0.024733685529364467,
@@ -290,6 +290,120 @@
     "split_strategy": "moment_based"
   },
   {
+    "name": "AdaptiveRadiusMC",
+    "n_points": 800,
+    "ari": 0.5148710455760307,
+    "nmi": 0.4834602423036614,
+    "purity": 0.8975,
+    "fraction_unassigned": 0.56625,
+    "ari_assigned": 0.10021064115382876,
+    "peak_memory_bytes": 321297,
+    "elapsed_seconds": 0.09271037500002421,
+    "throughput_pts_per_sec": 8629.023450717259,
+    "ari_by_phase": {
+      "0": 0.6100563633250237,
+      "1": 0.40265344532652836,
+      "2": 0.6285082531489112
+    },
+    "active_cells_over_time": [
+      [
+        100,
+        43
+      ],
+      [
+        200,
+        70
+      ],
+      [
+        300,
+        75
+      ],
+      [
+        400,
+        77
+      ],
+      [
+        500,
+        82
+      ],
+      [
+        600,
+        96
+      ],
+      [
+        700,
+        105
+      ],
+      [
+        800,
+        92
+      ]
+    ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.9549522482811931,
+    "ari_recent": 0.8852049065470929,
+    "nmi_recent": 0.8291561370106819,
+    "recent_window": 100,
+    "family": "AdaptiveRadiusMC"
+  },
+  {
+    "name": "DBSTREAM(th=1.2)",
+    "n_points": 800,
+    "ari": 0.03447120255039655,
+    "nmi": 0.09346289079954524,
+    "purity": 0.65625,
+    "fraction_unassigned": 0.0,
+    "ari_assigned": 0.03447120255039655,
+    "peak_memory_bytes": 23497,
+    "elapsed_seconds": 0.05683258399949409,
+    "throughput_pts_per_sec": 14076.431928682345,
+    "ari_by_phase": {
+      "0": 0.5645798635123787,
+      "1": 0.15209778219691716,
+      "2": 0.5723113677119055
+    },
+    "active_cells_over_time": [
+      [
+        100,
+        7
+      ],
+      [
+        200,
+        4
+      ],
+      [
+        300,
+        6
+      ],
+      [
+        400,
+        6
+      ],
+      [
+        500,
+        5
+      ],
+      [
+        600,
+        5
+      ],
+      [
+        700,
+        9
+      ],
+      [
+        800,
+        8
+      ]
+    ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.949383563670423,
+    "ari_recent": 0.603490521809127,
+    "nmi_recent": 0.6009803797507834,
+    "recent_window": 100,
+    "family": "DBSTREAM_tuned"
+  },
+  {
     "name": "DenStream",
     "n_points": 800,
     "ari": 0.06233775940569792,
@@ -297,9 +411,9 @@
     "purity": 0.72875,
     "fraction_unassigned": 0.0,
     "ari_assigned": 0.06233775940569792,
-    "peak_memory_bytes": 41144,
-    "elapsed_seconds": 0.09139633399990998,
-    "throughput_pts_per_sec": 8753.086310888442,
+    "peak_memory_bytes": 36488,
+    "elapsed_seconds": 0.06552179199934471,
+    "throughput_pts_per_sec": 12209.678270215822,
     "ari_by_phase": {
       "0": 0.47481540401800215,
       "1": 0.47623251633273095,
@@ -354,9 +468,9 @@
     "purity": 0.705,
     "fraction_unassigned": 0.0,
     "ari_assigned": 0.11226414814326764,
-    "peak_memory_bytes": 100128,
-    "elapsed_seconds": 0.06244770800003607,
-    "throughput_pts_per_sec": 12810.71836935213,
+    "peak_memory_bytes": 97584,
+    "elapsed_seconds": 0.05899349999890546,
+    "throughput_pts_per_sec": 13560.816022355732,
     "ari_by_phase": {
       "0": 0.2665111899557622,
       "1": 0.25342060263874433,
@@ -411,9 +525,9 @@
     "purity": 0.63125,
     "fraction_unassigned": 0.0,
     "ari_assigned": 0.019352450178747767,
-    "peak_memory_bytes": 22400,
-    "elapsed_seconds": 0.0470034999998461,
-    "throughput_pts_per_sec": 17020.009148310644,
+    "peak_memory_bytes": 22368,
+    "elapsed_seconds": 0.04529324999930395,
+    "throughput_pts_per_sec": 17662.676006078036,
     "ari_by_phase": {
       "0": 0.5630550467204852,
       "1": 0.19124798972863394,

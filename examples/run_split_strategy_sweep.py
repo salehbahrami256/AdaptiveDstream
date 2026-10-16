@@ -30,9 +30,12 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+from river import cluster as river_cluster
 
 from adaptive_dstream import (
     AdaptiveDStream,
+    AdaptiveRadiusMC,
+    RiverClusterAdapter,
     FixedGridDStream,
     make_river_baselines,
     make_varying_density_stream,
@@ -89,6 +92,20 @@ def main() -> None:
               f"ARI_recent={r.ari_recent:.3f}  decayed_purity={r.decayed_purity:.3f}  "
               f"peak_mem={r.peak_memory_bytes/1024:.1f}KB  unassigned={r.fraction_unassigned:.2f}")
 
+    # Branch adaptive-radius-microclusters: the grid's split strategy does not apply to the
+    # micro-cluster model, so it appears as a reference row (r0=0.4, picked on the frontier
+    # stream) next to its DBSTREAM control (best global threshold 1.2 on that stream).
+    r = run_stream_eval(lambda: AdaptiveRadiusMC(init_radius=0.4, max_radius=3.0), X, y, phase=phase,
+                        name="AdaptiveRadiusMC", eval_decay=EVAL_DECAY)
+    results.append({**r.to_dict(), "family": "AdaptiveRadiusMC"})
+    log.info(f"AdaptiveRadiusMC ARI={r.ari:.3f} ARI_assigned={r.ari_assigned} unassigned={r.fraction_unassigned:.2f} "
+             f"peak_mem={r.peak_memory_bytes/1024:.1f}KB")
+    r = run_stream_eval(lambda: RiverClusterAdapter(river_cluster.DBSTREAM(
+        clustering_threshold=1.2, fading_factor=0.01, cleanup_interval=2, intersection_factor=0.3)),
+        X, y, phase=phase, name="DBSTREAM(th=1.2)", eval_decay=EVAL_DECAY)
+    results.append({**r.to_dict(), "family": "DBSTREAM_tuned"})
+    log.info(f"DBSTREAM(th=1.2) ARI={r.ari:.3f} peak_mem={r.peak_memory_bytes/1024:.1f}KB")
+
     for name, adapter in make_river_baselines(seed=SEED).items():
         factory = (lambda a=adapter: a)
         r = run_stream_eval(factory, X, y, phase=phase, name=name, eval_decay=EVAL_DECAY)
@@ -104,7 +121,7 @@ def main() -> None:
     fig, ax = plt.subplots(figsize=(8, 5.5))
     labels = [r["name"] for r in results]
     aris = [r["ari"] for r in results]
-    colors = ["tab:blue", "tab:cyan"] + ["tab:red", "tab:pink", "tab:brown"] + ["tab:green", "tab:orange", "tab:purple"]
+    colors = ["tab:blue", "tab:cyan"] + ["tab:gray", "tab:olive", "tab:brown"] + ["tab:red", "tab:pink"] + ["tab:green", "tab:orange", "tab:purple"]
     ax.bar(labels, aris, color=colors[: len(labels)])
     ax.set_ylabel("Adjusted Rand Index")
     ax.set_title("ARI by model, split strategy compared for AdaptiveDStream\nvarying-density drifting stream")

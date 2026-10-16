@@ -1378,3 +1378,18 @@ the running per-dimension scale; (3) re-read old grid tables with ari_assigned;
 (4) peak memory is 5-20x DBSTREAM's (partly transient cdist matrices at checkpoints).
 
 PDF: latex/main.pdf recompiled 2026-10-15 (tectonic, 32 pages, no undefined/multiply-defined refs; new tables/figures spot-checked on pages 24-26). Earlier attempts failed only on tectonic font downloads (network); retries eventually cached the fonts.
+
+
+================================================================
+23. MAIN PAPER TABLES NOW INCLUDE THE NEW MODEL; PUBLICATION CHECKLIST (2026-10-16)
+================================================================
+User feedback: the new model appeared only in its own subsection, not in the paper's main tables.
+Fix: tables tab:frontier, tab:frontier-recent, tab:regime-ari, tab:dimsweep, tab:real-frontier and
+tab:splitstrategy (and the matching README tables) were regenerated from outputs/*.json and now include
+AdaptiveRadiusMC (+ DBSTREAM at its best/swept threshold as the control) and an ARI* column; prose after
+each table got a short "Update" note. run_split_strategy_sweep.py gained the AdaptiveRadiusMC and
+DBSTREAM(th=1.2) rows and was re-run (grid ARIs unchanged; memory values moved by tracemalloc noise,
+e.g. moment_based 326.0 -> 330.9 KB). PDF recompiled (34 pages).
+Added PUBLICATION_CHECKLIST.md (items to verify before submission). Discussion with the user also opened
+a possible geometric/topological direction (metric-generic clustering on manifolds such as the torus,
+LSH/kd-tree indexing); see the conversation / README next steps; nothing implemented yet.

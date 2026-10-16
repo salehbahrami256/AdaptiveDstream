@@ -144,24 +144,27 @@ Stream: `make_varying_density_stream`, `n_samples=2000`, `seed=7` (reproducible 
 ![ARI vs peak memory](outputs/frontier_ari_vs_memory.png)
 ![NMI vs peak memory](outputs/frontier_nmi_vs_memory.png)
 
-| Model | Peak memory | ARI | NMI | Fraction unassigned |
-|---|---:|---:|---:|---:|
-| FixedGrid n=2 | 12.0 KB | -0.001 | 0.013 | 0.03 |
-| FixedGrid n=3 | 15.7 KB | 0.001 | 0.001 | 0.03 |
-| FixedGrid n=4 | 20.2 KB | 0.001 | 0.009 | 0.04 |
-| DBSTREAM | 22.8 KB | 0.236 | 0.221 | 0.00 |
-| FixedGrid n=6 | 35.3 KB | 0.004 | 0.026 | 0.05 |
-| DenStream | 47.8 KB | 0.092 | 0.202 | 0.00 |
-| FixedGrid n=8 | 56.2 KB | 0.062 | 0.168 | 0.07 |
-| FixedGrid n=11 | 99.0 KB | 0.023 | 0.058 | 0.12 |
-| CluStream | 99.0 KB | 0.061 | 0.084 | 0.00 |
-| FixedGrid n=16 | 203.2 KB | 0.201 | 0.185 | 0.29 |
-| **AdaptiveDStream** | **304.3 KB** | **0.050** | **0.090** | 0.19 |
-| FixedGrid n=22 | 385.1 KB | 0.414 | 0.356 | 0.44 |
-| FixedGrid n=32 | 814.1 KB | 0.669 | 0.594 | 0.50 |
-| FixedGrid n=45 | 1609.1 KB | 0.796 | 0.725 | 0.53 |
+| Model | Peak memory | ARI | ARI* | NMI | Frac. unassigned |
+|---|---:|---:|---:|---:|---:|
+| FixedGrid n=2 | 12.3 KB | -0.001 | -0.001 | 0.013 | 0.03 |
+| FixedGrid n=3 | 15.4 KB | 0.001 | 0.000 | 0.001 | 0.03 |
+| FixedGrid n=4 | 20.1 KB | 0.001 | -0.001 | 0.009 | 0.04 |
+| DBSTREAM | 22.9 KB | 0.236 | 0.236 | 0.221 | 0.00 |
+| DBSTREAM(th=1.2) | 25.4 KB | 0.271 | 0.271 | 0.283 | 0.00 |
+| FixedGrid n=6 | 35.3 KB | 0.004 | -0.002 | 0.026 | 0.05 |
+| DenStream | 44.5 KB | 0.092 | 0.092 | 0.202 | 0.00 |
+| FixedGrid n=8 | 56.2 KB | 0.062 | 0.061 | 0.168 | 0.07 |
+| CluStream | 97.4 KB | 0.061 | 0.061 | 0.084 | 0.00 |
+| FixedGrid n=11 | 99.0 KB | 0.023 | -0.003 | 0.058 | 0.12 |
+| **AdaptiveRadiusMC r0=0.8** | 102.1 KB | 0.337 | 0.188 | 0.282 | 0.33 |
+| FixedGrid n=16 | 203.2 KB | 0.201 | 0.064 | 0.185 | 0.29 |
+| ****AdaptiveRadiusMC r0=0.4**** | **281.8 KB** | **0.749** | **0.125** | **0.656** | **0.49** |
+| **AdaptiveDStream (grid)** | **304.3 KB** | **0.050** | **0.023** | **0.090** | **0.19** |
+| FixedGrid n=22 | 385.1 KB | 0.414 | 0.042 | 0.356 | 0.44 |
+| FixedGrid n=32 | 814.1 KB | 0.669 | 0.067 | 0.594 | 0.50 |
+| FixedGrid n=45 | 1609.1 KB | 0.796 | 0.302 | 0.725 | 0.53 |
 
-**AdaptiveDStream is still dominated on ARI, but is now much cheaper.** With idle pruning working, peak memory falls from 666 KB to 304 KB (and from 1344 KB in the original pre-contraction run at twice the sample count), placing it between `FixedGrid(n=16)` (203 KB, ARI 0.201) and `FixedGrid(n=22)` (385 KB, ARI 0.414). Its ARI is 0.050 (previously 0.066), below both neighbors and far below `FixedGrid(n=32)`/`n=45` (0.669/0.796) and DBSTREAM (0.236 at 23 KB, ~13× less memory). Fraction unassigned is 0.19 (previously 0.21; the transitional-cell border rule is still doing its work — the original run was 0.42). So the frontier conclusion is unchanged: at every memory budget the fixed grid, or a river baseline, is at least as accurate. The same pattern — memory and unassigned fraction improve, ARI does not — repeats in the [regime sweep](#results-across-regimes).
+**AdaptiveDStream is still dominated on ARI, but is now much cheaper.** With idle pruning working, peak memory falls from 666 KB to 304 KB (and from 1344 KB in the original pre-contraction run at twice the sample count), placing it between `FixedGrid(n=16)` (203 KB, ARI 0.201) and `FixedGrid(n=22)` (385 KB, ARI 0.414). Its ARI is 0.050 (previously 0.066), below both neighbors and far below `FixedGrid(n=32)`/`n=45` (0.669/0.796) and DBSTREAM (0.236 at 23 KB, ~13× less memory). Fraction unassigned is 0.19 (previously 0.21; the transitional-cell border rule is still doing its work — the original run was 0.42). So the frontier conclusion is unchanged: at every memory budget the fixed grid, or a river baseline, is at least as accurate. The same pattern — memory and unassigned fraction improve, ARI does not — repeats in the [regime sweep](#results-across-regimes). *(The table now also lists `AdaptiveRadiusMC` and DBSTREAM at its best threshold; AdaptiveRadiusMC's 0.749 comes with ARI* 0.125 and 49% unassigned — see the [adaptive-radius section](#adaptive-radius-micro-clusters-this-branch).)*
 
 This is consistent with the root cause never having been about memory accounting or unassigned points in the first place:
 
@@ -186,13 +189,13 @@ Five regimes, all `n_samples=500`, `seed=7` (reduced from 2000 for the same reas
 
 ![ARI by model across regimes](outputs/regime_sweep_ari.png)
 
-| Regime | FixedGrid n=8 | FixedGrid n=32 | **AdaptiveDStream** | DenStream | CluStream | DBSTREAM |
-|---|---:|---:|---:|---:|---:|---:|
-| static_no_drift | 0.539 | 0.626 | **0.084** | 0.542 | 0.241 | 0.543 |
-| spatial_drift | 0.033 | 0.512 | **0.016** | 0.064 | 0.133 | 0.017 |
-| density_drift | 0.604 | 0.242 | **0.053** | 0.611 | 0.354 | 0.422 |
-| two_gaussian_drift | 0.386 | 0.003 | **0.057** | 0.384 | 0.340 | 0.063 |
-| moons_drift | 0.005 | 0.001 | **0.015** | 0.043 | 0.116 | 0.010 |
+| Regime | FixedGrid n=8 | FixedGrid n=32 | AdaptiveDStream (grid) | **AdaptiveRadiusMC** | DBSTREAM th=1.2 | DenStream | CluStream | DBSTREAM |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| static_no_drift | 0.539 | 0.626 | 0.084 | **0.781** | 0.599 | 0.542 | 0.241 | 0.543 |
+| spatial_drift | 0.033 | **0.512** | 0.016 | 0.437 | 0.019 | 0.064 | 0.133 | 0.017 |
+| density_drift | 0.604 | 0.242 | 0.053 | 0.378 | 0.492 | **0.611** | 0.354 | 0.422 |
+| two_gaussian_drift | **0.386** | 0.003 | 0.057 | 0.033 | 0.351 | 0.384 | 0.340 | 0.063 |
+| moons_drift | 0.005 | 0.001 | 0.015 | 0.006 | 0.037 | 0.043 | **0.116** | 0.010 |
 
 (ARI shown; full metrics including NMI, purity, peak memory, and fraction unassigned are in `outputs/regime_sweep_results.json`. Peak memory bands, for context: FixedGrid n=8 ≈ 54–60 KB, FixedGrid n=32 ≈ 806–808 KB, **AdaptiveDStream ≈ 177–259 KB** (down from ≈676–1296 KB pre-contraction), DenStream ≈ 15–35 KB, CluStream ≈ 95–98 KB, DBSTREAM ≈ 16–36 KB across regimes. Fraction unassigned for AdaptiveDStream is 0.12–0.14 across regimes, up from 0.02–0.05 in the previous run: at `n=500` the 50-point cold start of checkpointed clustering alone accounts for 0.10 of it, and a comparable +0.03–0.14 rise is visible for the fixed grids.)
 
@@ -212,18 +215,20 @@ Reproduce with `python examples/run_regime_sweep.py`.
 
 ![ARI by model, split strategy compared](outputs/split_strategy_ari.png)
 
-| Model | Peak memory | ARI | NMI | Fraction unassigned |
-|---|---:|---:|---:|---:|
-| DBSTREAM | 21.8 KB | 0.019 | 0.048 | 0.00 |
-| FixedGrid n=8 | 59.1 KB | 0.043 | 0.111 | 0.12 |
-| DenStream | 40.2 KB | 0.062 | 0.155 | 0.00 |
-| CluStream | 98.1 KB | 0.112 | 0.118 | 0.00 |
-| AdaptiveDStream (`equal_uniform`) | 258.7 KB | **0.033** | 0.090 | 0.12 |
-| AdaptiveDStream (`moment_based`) | 326.0 KB | **0.033** | 0.081 | 0.16 |
-| AdaptiveDStream (`point_mass`) | 356.6 KB | **0.020** | 0.066 | 0.38 |
-| FixedGrid n=32 | 811.0 KB | 0.504 | 0.474 | 0.58 |
+| Model | Peak memory | ARI | ARI* | NMI | Frac. unassigned |
+|---|---:|---:|---:|---:|---:|
+| DBSTREAM | 21.8 KB | 0.019 | 0.019 | 0.048 | 0.00 |
+| DBSTREAM th=1.2 | 22.9 KB | 0.034 | 0.034 | 0.093 | 0.00 |
+| DenStream | 35.6 KB | 0.062 | 0.062 | 0.155 | 0.00 |
+| FixedGrid n=8 | 59.2 KB | 0.043 | 0.038 | 0.111 | 0.12 |
+| CluStream | 95.3 KB | 0.112 | 0.112 | 0.118 | 0.00 |
+| AdaptiveDStream (equal_uniform) | 258.9 KB | 0.033 | 0.028 | 0.090 | 0.12 |
+| **AdaptiveRadiusMC (r0=0.4)** | 313.8 KB | 0.515 | 0.100 | 0.483 | 0.57 |
+| AdaptiveDStream (moment_based) | 330.9 KB | 0.033 | 0.025 | 0.081 | 0.16 |
+| AdaptiveDStream (point_mass) | 356.6 KB | 0.020 | 0.013 | 0.066 | 0.38 |
+| FixedGrid n=32 | 811.0 KB | 0.504 | 0.018 | 0.474 | 0.58 |
 
-**`equal_uniform` and `moment_based` now tie on ARI (0.033 each); `point_mass` is clearly the worst, for an explainable reason.** (Previously `equal_uniform` was narrowly ahead, 0.024 vs. 0.021 — a difference that did not survive the changes above and was within noise at this sample size.) `equal_uniform` is still the cheaper of the two (259 KB vs. 326 KB) with lower fraction unassigned (0.12 vs. 0.16). `point_mass` hands each split's entire mass to a single child and leaves the other `2**d - 1` children at exactly zero — those children are then permanently `sparse` until real new data arrives, so more of the domain goes unrepresented by any dense cell: fraction unassigned (0.38) is 2–3× the other two strategies', and it uses the most memory of the three despite that (creating a full `GridCell` for children that stay empty is not free). `moment_based` spreads mass more realistically than `point_mass` (see the exact-conservation and mean-skew tests in `tests/test_model.py`) but that does not translate into a measurable ARI gain over the even split on *this* stream. None of the three strategies gets AdaptiveDStream close to the fixed-grid or river baselines — this experiment isolates the split-mass-redistribution question specifically, and the answer is that it is not where the current ARI gap comes from; see [Known limitations](#known-limitations).
+**`equal_uniform` and `moment_based` now tie on ARI (0.033 each); `point_mass` is clearly the worst, for an explainable reason.** (Previously `equal_uniform` was narrowly ahead, 0.024 vs. 0.021 — a difference that did not survive the changes above and was within noise at this sample size.) `equal_uniform` is still the cheaper of the two (259 KB vs. 331 KB) with lower fraction unassigned (0.12 vs. 0.16). `point_mass` hands each split's entire mass to a single child and leaves the other `2**d - 1` children at exactly zero — those children are then permanently `sparse` until real new data arrives, so more of the domain goes unrepresented by any dense cell: fraction unassigned (0.38) is 2–3× the other two strategies', and it uses the most memory of the three despite that (creating a full `GridCell` for children that stay empty is not free). `moment_based` spreads mass more realistically than `point_mass` (see the exact-conservation and mean-skew tests in `tests/test_model.py`) but that does not translate into a measurable ARI gain over the even split on *this* stream. None of the three strategies gets AdaptiveDStream close to the fixed-grid or river baselines — this experiment isolates the split-mass-redistribution question specifically, and the answer is that it is not where the current ARI gap comes from; see [Known limitations](#known-limitations). For reference, `AdaptiveRadiusMC` (no split strategy) has ARI 0.515 but ARI* 0.100 with 57% unassigned at 314 KB, and DBSTREAM th=1.2 has ARI 0.034 at 23 KB — the same headline-versus-assigned gap as on the frontier stream.
 
 Reproduce with `python examples/run_split_strategy_sweep.py`.
 
@@ -238,22 +243,48 @@ Same `varying_density` stream as the headline result (`n_samples=400`, `seed=7`;
 ![Peak memory vs dimension](outputs/dimension_sweep_memory.png)
 ![ARI vs dimension](outputs/dimension_sweep_ari.png)
 
-| Dim | Model | Cells | Peak memory | ARI | NMI |
+| Dim | Model | Cells / micro-clusters | Peak memory | ARI | NMI |
 |---:|---|---:|---:|---:|---:|
-| 2 | FixedGrid (n=50) | 2,500 | 1971.8 KB | 0.304 | 0.362 |
-| 2 | **AdaptiveDStream** | 136 | **143.9 KB** | 0.019 | 0.035 |
-| 3 | FixedGrid (n=14) | 2,744 | 2243.1 KB | 0.288 | 0.315 |
-| 3 | **AdaptiveDStream** | 225 | **211.5 KB** | 0.001 | 0.005 |
-| 4 | FixedGrid (n=7) | 2,401 | 2038.6 KB | 0.363 | 0.350 |
-| 4 | **AdaptiveDStream** | 466 | **421.7 KB** | 0.004 | 0.016 |
-| 5 | FixedGrid (n=5) | 3,125 | 2749.0 KB | 0.335 | 0.321 |
-| 5 | **AdaptiveDStream** | 714 | **647.5 KB** | -0.002 | 0.005 |
-| 6 | FixedGrid (n=4) | 4,096 | 3730.5 KB | 0.482 | 0.394 |
-| 6 | **AdaptiveDStream** | 946 | **874.3 KB** | 0.071 | 0.073 |
-| 8 | FixedGrid (n=3) | 6,561 | 6385.8 KB | 0.441 | 0.351 |
-| 8 | **AdaptiveDStream** | 1,531 | **1510.8 KB** | 0.229 | 0.171 |
-| 10 | FixedGrid (n=2) | 1,024 | 1062.7 KB | 0.007 | 0.116 |
-| 10 | **AdaptiveDStream** | 1,024 | **1280.9 KB** | 0.031 | 0.157 |
+| 2 | FixedGrid (n=50) | 2500 | 1971.9 KB | 0.304 | 0.362 |
+| 2 | AdaptiveDStream (grid) | 136 | 143.9 KB | 0.019 | 0.035 |
+| 2 | **AdaptiveRadiusMC** | 87 | 272.8 KB | 0.341 | 0.330 |
+| 2 | DBSTREAM (scaled th) | 6 | 16.2 KB | 0.057 | 0.156 |
+| 3 | FixedGrid (n=14) | 2744 | 2243.8 KB | 0.288 | 0.315 |
+| 3 | AdaptiveDStream (grid) | 225 | 211.5 KB | 0.001 | 0.005 |
+| 3 | **AdaptiveRadiusMC** | 121 | 377.3 KB | 0.340 | 0.369 |
+| 3 | DBSTREAM (scaled th) | 12 | 17.2 KB | 0.126 | 0.229 |
+| 4 | FixedGrid (n=7) | 2401 | 2039.2 KB | 0.363 | 0.350 |
+| 4 | AdaptiveDStream (grid) | 466 | 421.7 KB | 0.004 | 0.016 |
+| 4 | **AdaptiveRadiusMC** | 133 | 436.9 KB | 0.404 | 0.433 |
+| 4 | DBSTREAM (scaled th) | 7 | 13.3 KB | 0.097 | 0.184 |
+| 5 | FixedGrid (n=5) | 3125 | 2749.7 KB | 0.335 | 0.321 |
+| 5 | AdaptiveDStream (grid) | 714 | 647.6 KB | -0.002 | 0.005 |
+| 5 | **AdaptiveRadiusMC** | 139 | 478.2 KB | 0.416 | 0.451 |
+| 5 | DBSTREAM (scaled th) | 5 | 11.1 KB | 0.039 | 0.075 |
+| 6 | FixedGrid (n=4) | 4096 | 3731.2 KB | 0.482 | 0.394 |
+| 6 | AdaptiveDStream (grid) | 946 | 874.8 KB | 0.071 | 0.073 |
+| 6 | **AdaptiveRadiusMC** | 142 | 493.9 KB | 0.320 | 0.400 |
+| 6 | DBSTREAM (scaled th) | 6 | 14.6 KB | 0.024 | 0.068 |
+| 8 | FixedGrid (n=3) | 6561 | 6386.6 KB | 0.441 | 0.351 |
+| 8 | AdaptiveDStream (grid) | 1531 | 1511.3 KB | 0.229 | 0.171 |
+| 8 | **AdaptiveRadiusMC** | 149 | 547.3 KB | 0.304 | 0.388 |
+| 8 | DBSTREAM (scaled th) | 4 | 10.9 KB | 0.218 | 0.211 |
+| 10 | FixedGrid (n=2) | 1024 | 1063.5 KB | 0.007 | 0.116 |
+| 10 | AdaptiveDStream (grid) | 1024 | 1281.4 KB | 0.031 | 0.157 |
+| 10 | **AdaptiveRadiusMC** | 135 | 469.1 KB | 0.253 | 0.362 |
+| 10 | DBSTREAM (scaled th) | 5 | 11.8 KB | 0.037 | 0.069 |
+| 12 | FixedGrid (n=2) | 4096 | 4499.0 KB | 0.205 | 0.270 |
+| 12 | AdaptiveDStream (grid) | 1 | 7.2 KB | -0.000 | 0.011 |
+| 12 | **AdaptiveRadiusMC** | 149 | 556.6 KB | 0.227 | 0.339 |
+| 12 | DBSTREAM (scaled th) | 3 | 16.2 KB | 0.045 | 0.081 |
+| 15 | FixedGrid (n=2) | 32768 | 39091.0 KB | 0.022 | 0.105 |
+| 15 | AdaptiveDStream (grid) | 1 | 7.3 KB | -0.001 | 0.004 |
+| 15 | **AdaptiveRadiusMC** | 134 | 556.1 KB | 0.257 | 0.346 |
+| 15 | DBSTREAM (scaled th) | 4 | 16.6 KB | 0.086 | 0.096 |
+| 20 | FixedGrid | skipped (cell cap) | | | |
+| 20 | AdaptiveDStream (grid) | 1 | 7.4 KB | -0.001 | 0.000 |
+| 20 | **AdaptiveRadiusMC** | 133 | 525.0 KB | 0.339 | 0.401 |
+| 20 | DBSTREAM (scaled th) | 4 | 18.1 KB | 0.082 | 0.092 |
 
 Full numbers in `outputs/dimension_sweep_results.json`.
 
@@ -263,6 +294,8 @@ Full numbers in `outputs/dimension_sweep_results.json`.
 - **Accuracy: `AdaptiveDStream` is dominated for dim 2–6, and the gap narrows at dim=8 exactly as before (ARI 52% of the fixed grid's — 0.229 vs. 0.441 — up from single digits at low dimension; the fixed grid's own ARI fell from 0.697 to 0.441 with checkpointed clustering's cold start, so part of the narrowing is the fixed grid getting worse, not `AdaptiveDStream` getting better).** This is consistent with the same root cause (see [Known limitations](#known-limitations)): a split fragments mass across `2**dim` children, a far harsher penalty at dim=8 (256-way) than at dim=2 (4-way), and the dense threshold is still an absolute count, unaffected by contraction or transitional assignment. At dim=10, `AdaptiveDStream` (0.031) nominally exceeds the fixed grid (0.007) — but the fixed grid's ARI collapsed sharply here (0.486 in the earlier, larger-sample run vs. 0.007 now), most plausibly a small-sample artifact of `n=2`-per-axis being an extremely coarse grid at `n_samples=400`, not evidence that `AdaptiveDStream` overtook it on merit.
 
 **Caveats, so this isn't overread:** single seed, `n_samples=400` (smaller than both the previous dimension-sweep run and the 2D headline result), and neither model's `dense_threshold`/`sparse_threshold` was retuned per dimension — both remain absolute decayed counts, so the known limitation above is a confound here, not something this experiment isolates from. The dim=10 reversal in particular should be read as sample-size noise, not a validated result. Read this as "the memory hypothesis holds and is worth building on, the accuracy question is still open," not as a validated high-dimensional result.
+
+**Update:** the table above now includes `AdaptiveRadiusMC` and DBSTREAM (distance scales × sqrt(dim/2)). AdaptiveRadiusMC's memory (273–557 KB) and micro-cluster count (87–149) are flat in dim and it keeps working at dim ≥ 12 where the grid `AdaptiveDStream` collapses to one leaf; its ARI (0.23–0.42) is above the grid method's everywhere, but ARI* is ≈0 in nearly every row, so most of that is the unassigned-as-noise convention.
 
 Reproduce with `python examples/run_dimension_sweep.py`.
 
@@ -275,21 +308,33 @@ Reproduce with `python examples/run_dimension_sweep.py`.
 ![ARI vs peak memory, three real datasets](outputs/real_frontier_ari.png)
 ![NMI vs peak memory, three real datasets](outputs/real_frontier_nmi.png)
 
-| Dataset | Model | Peak memory | ARI |
-|---|---|---:|---:|
-| kddcup99 | FixedGrid n=4 | 3740 KB | 0.085 |
-| kddcup99 | **AdaptiveDStream** (max_cells=2000) | **1470 KB** | **0.147** |
-| kddcup99 | DenStream | 33 KB | 0.393 |
-| covtype | FixedGrid n=3 | 682 KB | 0.019 |
-| covtype | **AdaptiveDStream** (max_cells=300) | **319 KB** | **0.034** |
-| covtype | DBSTREAM | 50 KB | 0.038 |
-| sensor:shuttle | FixedGrid n=3 | 676 KB | 0.062 |
-| sensor:shuttle | **AdaptiveDStream** (max_cells=300) | **314 KB** | **0.002** |
-| sensor:shuttle | DenStream | 27 KB | 0.423 |
+| Dataset | Model | Peak memory | ARI | ARI* | Frac. unassigned |
+|---|---|---:|---:|---:|---:|
+| kddcup99 | FixedGrid n=4 | 3740 KB | 0.085 | 0.050 | 0.12 |
+| kddcup99 | AdaptiveDStream (grid) (max_cells=2000) | 1470 KB | 0.147 | 0.094 | 0.08 |
+| kddcup99 | **AdaptiveRadiusMC** (r0=0.05) | 351 KB | 0.159 | 0.068 | 0.27 |
+| kddcup99 | DBSTREAM (threshold swept) (th=0.05) | 46 KB | 0.134 | 0.134 | 0.00 |
+| kddcup99 | DenStream | 28 KB | 0.393 | 0.393 | 0.00 |
+| kddcup99 | CluStream | 191 KB | 0.328 | 0.328 | 0.00 |
+| kddcup99 | DBSTREAM (default) | 26 KB | 0.001 | 0.001 | 0.00 |
+| covtype | FixedGrid n=3 | 682 KB | 0.019 | 0.028 | 0.21 |
+| covtype | AdaptiveDStream (grid) (max_cells=300) | 318 KB | 0.034 | 0.039 | 0.08 |
+| covtype | **AdaptiveRadiusMC** (r0=0.35) | 273 KB | 0.058 | 0.051 | 0.14 |
+| covtype | DBSTREAM (threshold swept) (th=0.35) | 72 KB | 0.038 | 0.038 | 0.00 |
+| covtype | DenStream | 24 KB | 0.001 | 0.000 | 0.00 |
+| covtype | CluStream | 188 KB | 0.018 | 0.018 | 0.00 |
+| covtype | DBSTREAM (default) | 50 KB | 0.038 | 0.038 | 0.00 |
+| sensor | FixedGrid n=3 | 676 KB | 0.062 | 0.035 | 0.07 |
+| sensor | AdaptiveDStream (grid) (max_cells=300) | 314 KB | 0.002 | 0.001 | 0.05 |
+| sensor | **AdaptiveRadiusMC** (r0=0.35) | 45 KB | 0.319 | 0.094 | 0.10 |
+| sensor | DBSTREAM (threshold swept) (th=0.5) | 29 KB | 0.341 | 0.341 | 0.00 |
+| sensor | DenStream | 28 KB | 0.423 | 0.423 | 0.00 |
+| sensor | CluStream | 188 KB | -0.003 | -0.003 | 0.00 |
+| sensor | DBSTREAM (default) | 34 KB | 0.341 | 0.341 | 0.00 |
 
 (Best-ARI row per family per dataset, for readability; the full sweep — all four fixed-grid resolutions, all four `AdaptiveDStream` memory budgets, every river baseline, per dataset — is in `outputs/real_frontier_results.json`.)
 
-**On real data, neither grid method is competitive with the river micro-cluster baselines — and `AdaptiveDStream` does not obviously beat the fixed grid the way its memory advantage on synthetic noise dimensions ([Higher dimensions](#higher-dimensions)) suggested it might.** Across all three datasets, both `FixedGridDStream` and `AdaptiveDStream` score in a similar, weak, inconsistent range (best ARI per dataset: 0.019–0.147 for the grid methods), while DenStream (kddcup99 0.393, sensor 0.423) and CluStream (kddcup99 0.328) do far better using roughly 10–45× less memory than `AdaptiveDStream`'s best-scoring configurations. `AdaptiveDStream` is now nominally the best *grid* method on kddcup99 (0.147 vs. 0.085) and covtype (0.034 vs. 0.019) and the worst on sensor (0.002 vs. 0.062), an inconsistency consistent with noise around zero rather than a real advantage; its memory is also 2–4× lower than before at the same `max_cells` (pruning), e.g. 1470 KB at `max_cells=2000` on kddcup99. covtype is the exception where nothing scores well (best ARI anywhere is DBSTREAM's 0.038) — plausibly the 7-class cartographic problem isn't well suited to density-based clustering at all, real or synthetic, rather than a method-specific failure.
+**On real data, neither grid method is competitive with the river micro-cluster baselines — and `AdaptiveDStream` does not obviously beat the fixed grid the way its memory advantage on synthetic noise dimensions ([Higher dimensions](#higher-dimensions)) suggested it might.** Across all three datasets, both `FixedGridDStream` and `AdaptiveDStream` score in a similar, weak, inconsistent range (best ARI per dataset: 0.019–0.147 for the grid methods), while DenStream (kddcup99 0.393, sensor 0.423) and CluStream (kddcup99 0.328) do far better using roughly 10–45× less memory than `AdaptiveDStream`'s best-scoring configurations. `AdaptiveDStream` is now nominally the best *grid* method on kddcup99 (0.147 vs. 0.085) and covtype (0.034 vs. 0.019) and the worst on sensor (0.002 vs. 0.062), an inconsistency consistent with noise around zero rather than a real advantage; its memory is also 2–4× lower than before at the same `max_cells` (pruning), e.g. 1470 KB at `max_cells=2000` on kddcup99. covtype is the exception where nothing scores well (best ARI anywhere is DBSTREAM's 0.038) — plausibly the 7-class cartographic problem isn't well suited to density-based clustering at all, real or synthetic, rather than a method-specific failure. **Update:** the table now lists `AdaptiveRadiusMC` (best `init_radius` per dataset) and DBSTREAM with its threshold swept over the same range; AdaptiveRadiusMC beats the grid methods on sensor (0.319 vs 0.062), is about equal on kddcup99 (0.159 vs 0.147), and does not beat DenStream/DBSTREAM except on covtype, where everything is near zero.
 
 ### Degeneracy at realistic feature counts
 
@@ -316,17 +361,20 @@ All four synthetic sweeps above were re-run with `eval_decay=0.99` (see [Recency
 
 | Model | Peak memory | ARI | ARI (recent) | Decayed purity |
 |---|---:|---:|---:|---:|
-| FixedGrid n=2 | 12.0 KB | -0.001 | 0.000 | 0.542 |
-| FixedGrid n=3 | 15.7 KB | 0.001 | 0.000 | 0.542 |
-| FixedGrid n=4 | 20.2 KB | 0.001 | -0.004 | 0.542 |
-| DBSTREAM | 22.8 KB | 0.236 | 0.481 | 0.978 |
+| FixedGrid n=2 | 12.3 KB | -0.001 | 0.000 | 0.542 |
+| FixedGrid n=3 | 15.4 KB | 0.001 | 0.000 | 0.542 |
+| FixedGrid n=4 | 20.1 KB | 0.001 | -0.004 | 0.542 |
+| DBSTREAM | 22.9 KB | 0.236 | 0.481 | 0.978 |
+| DBSTREAM(th=1.2) | 25.4 KB | 0.271 | 0.535 | 0.974 |
 | FixedGrid n=6 | 35.3 KB | 0.004 | -0.008 | 0.542 |
-| DenStream | 47.8 KB | 0.092 | 0.397 | 0.991 |
+| DenStream | 44.5 KB | 0.092 | 0.397 | 0.991 |
 | FixedGrid n=8 | 56.2 KB | 0.062 | -0.004 | 0.542 |
+| CluStream | 97.4 KB | 0.061 | 0.485 | 0.980 |
 | FixedGrid n=11 | 99.0 KB | 0.023 | 0.730 | 0.981 |
-| CluStream | 99.0 KB | 0.061 | 0.485 | 0.980 |
+| **AdaptiveRadiusMC r0=0.8** | 102.1 KB | 0.337 | 0.753 | 0.990 |
 | FixedGrid n=16 | 203.2 KB | 0.201 | 0.521 | 0.986 |
-| **AdaptiveDStream** | **304.3 KB** | **0.050** | **0.308** | **0.988** |
+| ****AdaptiveRadiusMC r0=0.4**** | **281.8 KB** | **0.749** | **0.978** | **0.999** |
+| **AdaptiveDStream (grid)** | **304.3 KB** | **0.050** | **0.308** | **0.988** |
 | FixedGrid n=22 | 385.1 KB | 0.414 | 0.879 | 0.998 |
 | FixedGrid n=32 | 814.1 KB | 0.669 | 1.000 | 0.999 |
 | FixedGrid n=45 | 1609.1 KB | 0.796 | 0.978 | 0.997 |

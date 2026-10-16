@@ -1,16 +1,10 @@
-the main problem of this method is how can we approximately answer this problem of whether the data in this particular local part of space are equally distributed or not
+so we should do these things:
+1) your last message impose a to do list that should be verified on last stage for a good paper.
+2) I want to read about stream algorithms and techniques so I could find out if I could find tools to improve it or not? [may be I'll try to narrow down the problem geometrically to bring some topological method to a problem too. 
+ may be I use some DataStructures and algorithms such as LSH and Kd-trees, may be I will focus on other aspect of problem too, and finally may I find out some improvement in algorithm design to overcome DBSTREAM.] I need to communicate with you on details to try above ideas.
+3) you didn't complete your main.pdf completely. for example in reports of table 2 and 3 there is no point to adaptive radious.
 
-my first statistical try lead us to variance, mean etc
-may be other approaches used better? do you have any idea for me? 
-don't change code in this stage just communicate ideas.
-
-on the other hand
-i think local sensitive hashing and some idea like count min sketch could lead us to more siutable criteria rather than just variance and mean
-and also a big part of my paper would be this:
-befor providing an algorithm we should focus on some sub-algorithms like this:
-there is a data stream in this base higher dimensional box [the subset of space that is splitted by our method]
-the first problem is to decide whether or nor data in this cell are equidistributed or not
-the second when we persuaded that this is not equally distributed we decide to expand cell to it's child
-how do it?
-the other problems are cells awareness about other cells
-for contracting potential
+some more words about topology:
+by topological and geometric methods I mean for example may be a final result is to answer questions like what we should do if:
+a clusters have a very specific geometric property, for example it has topological torus shape. or if clusters and data generated from them doesn't live in a Euclidean but in a some specific world like tourus. how to customize DB stream for these type of problems.
+I know it seems much harder way to unlock but I'm totally obsessed with these type of problems these days because I want to do a research on geometric learning theory. I think this field is still novel and new. am I right?
