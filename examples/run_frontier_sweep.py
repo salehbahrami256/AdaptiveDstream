@@ -23,9 +23,13 @@ from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 
+from river import cluster as river_cluster
+
 from adaptive_dstream import (
     AdaptiveDStream,
+    AdaptiveRadiusMC,
     FixedGridDStream,
+    RiverClusterAdapter,
     make_river_baselines,
     make_varying_density_stream,
     run_stream_eval,
@@ -47,6 +51,12 @@ SEED = 7
 # reproduce on demand.
 N_SAMPLES = 2000
 GRID_RESOLUTIONS = [2, 3, 4, 6, 8, 11, 16, 22, 32, 45]
+# Branch adaptive-radius-microclusters: the new method is swept over its one
+# scale knob (init_radius), and the hypothesis it tests -- *local* radius beats
+# a *global* radius -- needs a control: DBSTREAM swept over its single global
+# clustering_threshold on the same stream, same number of settings.
+MC_INIT_RADII = [0.15, 0.2, 0.3, 0.4, 0.6, 0.8, 1.2, 2.0]
+DBSTREAM_THRESHOLDS = [0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.6, 2.0]
 # Recency-weighted evaluation lens (evaluation.py's decayed_purity_score /
 # ari_recent / nmi_recent), applied identically to every model below rather
 # than reading each model's own internal decay/fading parameter (which
@@ -114,6 +124,35 @@ def main() -> None:
           f"ARI_recent={r.ari_recent:.3f}  decayed_purity={r.decayed_purity:.3f}  "
           f"peak_mem={r.peak_memory_bytes/1024:.1f}KB  unassigned={r.fraction_unassigned:.2f}")
 
+    for ir in MC_INIT_RADII:
+        factory = lambda ir=ir: AdaptiveRadiusMC(init_radius=ir, max_radius=3.0)
+        r = run_stream_eval(factory, X, y, phase=phase, name=f"AdaptiveRadiusMC(r0={ir})", eval_decay=EVAL_DECAY)
+        results.append({**r.to_dict(), "family": "AdaptiveRadiusMC", "n_cells_per_dim": None, "param": ir})
+        log.info(f"AdaptiveRadiusMC r0={ir:<4}  ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
+                 f"ARI_recent={r.ari_recent:.3f}  peak_mem={r.peak_memory_bytes/1024:.1f}KB  "
+                 f"unassigned={r.fraction_unassigned:.2f}")
+
+    # Coverage ablation: the headline ARI scores unassigned points as one noise
+    # cluster, so at the default dense_weight the model can score well just by
+    # leaving the broad cluster unassigned (see ari_assigned / fraction_unassigned).
+    # Lowering dense_weight trades that away for coverage; shown, not tuned on.
+    for dw in [3.0, 1.5, 0.8]:
+        factory = lambda dw=dw: AdaptiveRadiusMC(init_radius=0.4, max_radius=3.0, dense_weight=dw)
+        r = run_stream_eval(factory, X, y, phase=phase, name=f"AdaptiveRadiusMC(r0=0.4,dense_weight={dw})",
+                            eval_decay=EVAL_DECAY)
+        results.append({**r.to_dict(), "family": "AdaptiveRadiusMC_dw", "n_cells_per_dim": None, "param": dw})
+        log.info(f"AdaptiveRadiusMC r0=0.4 dense_weight={dw:<4} ARI={r.ari:.3f}  ARI_assigned={r.ari_assigned}  "
+                 f"unassigned={r.fraction_unassigned:.2f}")
+
+    for th in DBSTREAM_THRESHOLDS:
+        factory = lambda th=th: RiverClusterAdapter(
+            river_cluster.DBSTREAM(clustering_threshold=th, fading_factor=0.01,
+                                   cleanup_interval=2, intersection_factor=0.3), name="DBSTREAM")
+        r = run_stream_eval(factory, X, y, phase=phase, name=f"DBSTREAM(th={th})", eval_decay=EVAL_DECAY)
+        results.append({**r.to_dict(), "family": "DBSTREAM_sweep", "n_cells_per_dim": None, "param": th})
+        log.info(f"DBSTREAM th={th:<4}  ARI={r.ari:.3f}  NMI={r.nmi:.3f}  "
+                 f"ARI_recent={r.ari_recent:.3f}  peak_mem={r.peak_memory_bytes/1024:.1f}KB")
+
     for name, adapter in make_river_baselines(seed=SEED).items():
         factory = (lambda a=adapter: a)  # river models are cheap; adapter is fresh from make_river_baselines
         r = run_stream_eval(factory, X, y, phase=phase, name=name, eval_decay=EVAL_DECAY)
@@ -149,9 +188,16 @@ def main() -> None:
 
         adaptive_row = next(r for r in results if r["family"] == "AdaptiveDStream")
         ax.scatter([adaptive_row["peak_memory_bytes"]], [adaptive_row[metric]],
-                   marker="*", s=220, color="tab:red", label="AdaptiveDStream", zorder=5)
+                   marker="*", s=220, color="black", label="AdaptiveDStream (grid)", zorder=5)
 
-        colors = ["tab:green", "tab:orange", "tab:purple"]
+        for fam, label, color, marker in [
+                ("AdaptiveRadiusMC", "AdaptiveRadiusMC (sweep over init_radius)", "tab:red", "D"),
+                ("DBSTREAM_sweep", "DBSTREAM (sweep over global threshold)", "tab:purple", "v")]:
+            rows = sorted((r for r in results if r["family"] == fam), key=lambda r: r["peak_memory_bytes"])
+            ax.plot([r["peak_memory_bytes"] for r in rows], [r[metric] for r in rows],
+                    marker=marker, linestyle="--", label=label, color=color, alpha=0.85)
+
+        colors = ["tab:green", "tab:orange", "tab:gray"]
         for (name, _), color in zip(make_river_baselines(seed=SEED).items(), colors):
             row = next(r for r in results if r["family"] == name)
             ax.scatter([row["peak_memory_bytes"]], [row[metric]],

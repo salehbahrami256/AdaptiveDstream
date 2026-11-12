@@ -113,6 +113,12 @@ class EvalResult:
     purity: float = field(init=False)
     throughput_pts_per_sec: float = field(init=False)
     fraction_unassigned: float = field(init=False)
+    # ARI restricted to points the model actually assigned (pred != -1). The
+    # headline ``ari`` scores every unassigned point as one extra "noise"
+    # cluster, which can reward a model that labels a whole real cluster as
+    # noise; this is the check on that. Read it together with
+    # ``fraction_unassigned``: a high value at high coverage is the real win.
+    ari_assigned: float | None = field(init=False)
     ari_by_phase: dict = field(init=False)
     decayed_purity: float | None = field(init=False)
     ari_recent: float | None = field(init=False)
@@ -125,6 +131,9 @@ class EvalResult:
         self.purity = purity_score(self.y_true, self.y_pred)
         self.throughput_pts_per_sec = self.n_points / self.elapsed_seconds if self.elapsed_seconds > 0 else float("inf")
         self.fraction_unassigned = float(np.mean(self.y_pred == UNASSIGNED_LABEL))
+        assigned = self.y_pred != UNASSIGNED_LABEL
+        self.ari_assigned = (adjusted_rand_score(self.y_true[assigned], self.y_pred[assigned])
+                             if assigned.sum() > 1 else None)
         self.ari_by_phase = {}
         if self.phase is not None:
             for p in np.unique(self.phase):
@@ -164,6 +173,7 @@ class EvalResult:
             "nmi": self.nmi,
             "purity": self.purity,
             "fraction_unassigned": self.fraction_unassigned,
+            "ari_assigned": self.ari_assigned,
             "peak_memory_bytes": self.peak_memory_bytes,
             "elapsed_seconds": self.elapsed_seconds,
             "throughput_pts_per_sec": self.throughput_pts_per_sec,

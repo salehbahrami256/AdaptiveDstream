@@ -1,5 +1,6 @@
 from .model import AdaptiveDStream
 from .baselines import FixedGridDStream, RiverClusterAdapter, make_river_baselines
+from .microcluster import AdaptiveRadiusMC
 from .synthetic import (
     make_drifting_stream,
     make_varying_density_stream,
@@ -22,6 +23,7 @@ from .real_data import load as load_real_dataset, LOADERS as REAL_DATASETS
 
 __all__ = [
     "AdaptiveDStream",
+    "AdaptiveRadiusMC",
     "FixedGridDStream",
     "RiverClusterAdapter",
     "make_river_baselines",

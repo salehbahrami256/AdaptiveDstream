@@ -141,3 +141,14 @@ def test_run_stream_eval_tracks_active_cells_and_phase_breakdown():
     assert d["name"] == "fixedgrid"
     assert -1.0 <= d["ari"] <= 1.0
     assert 0.0 <= d["nmi"] <= 1.0
+
+
+def test_ari_assigned_ignores_unassigned_points():
+    from adaptive_dstream.evaluation import EvalResult
+    y_true = np.array([0, 0, 1, 1, 0, 1])
+    y_pred = np.array([0, 0, 1, 1, -1, -1])  # perfect on the assigned four
+    r = EvalResult(name="m", y_true=y_true, y_pred=y_pred, phase=None, active_cells_over_time=[],
+                   peak_memory_bytes=1, elapsed_seconds=1.0, n_points=6)
+    assert r.ari_assigned == 1.0
+    assert r.ari < 1.0
+    assert r.to_dict()["ari_assigned"] == 1.0

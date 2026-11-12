@@ -43,6 +43,8 @@ python examples/run_split_strategy_sweep.py          # compares equal_uniform / 
 python examples/run_dimension_sweep.py               # memory/accuracy vs. dimension
 python examples/run_cell_equidistribution_sweep.py   # moment vs. Weyl vs. random-projection AUC comparison
 python examples/run_real_data_frontier.py            # real-data (kddcup99/covtype/sensor) frontier
+python examples/run_scale_test.py                    # 10k-400k-point stability test (AdaptiveRadiusMC vs DBSTREAM)
+# real-data downloads need: export SSL_CERT_FILE=$(python -c 'import certifi;print(certifi.where())')  (pip install certifi)
 
 # compile the paper (tectonic, not pdflatex/latexmk — see research_notes.txt)
 cd latex && tectonic main.tex
@@ -98,6 +100,11 @@ Conventions, so new code stays consistent:
   redistribution to children is one of three interchangeable strategies (`_redistribute_*`, selected via
   `split_strategy=`). Clustering is connected components over face-adjacent dense cells, with a
   border-assignment pass that attaches transitional cells to an adjacent dense cluster.
+- `src/adaptive_dstream/microcluster.py` — `AdaptiveRadiusMC` (branch `adaptive-radius-microclusters`): bounded decayed
+  micro-clusters with a per-micro-cluster adaptive radius, prune/merge/cap maintenance, component clustering at checkpoints.
+  Same `partial_fit`/`predict_point_cluster`/`summary` interface as every other model. It is "DBSTREAM with a local
+  radius", so any claim about it must be made against DBSTREAM swept over its global threshold (the control), and read
+  with `ari_assigned`/`fraction_unassigned` (see below), not headline ARI alone.
 - `src/adaptive_dstream/baselines.py` — `FixedGridDStream` (a non-adaptive D-Stream built by subclassing
   `AdaptiveDStream` with a pre-partitioned uniform grid and `_should_split` always `False`, so it shares
   decay/clustering/prediction code rather than reimplementing them) and `RiverClusterAdapter`, which wraps
@@ -119,7 +126,9 @@ Conventions, so new code stays consistent:
 - `src/adaptive_dstream/evaluation.py` — `run_stream_eval` drives a model prequentially (predict, then
   update) and reports ARI/NMI/purity (with unassigned points mapped to sentinel label `-1`, never dropped
   or merged), peak memory (`tracemalloc`, started before model construction), throughput, fraction
-  unassigned.
+  unassigned, and `ari_assigned` (ARI over only assigned points). **Always read ARI together with `ari_assigned` and
+  `fraction_unassigned`:** the sentinel-`-1` convention gives a model ARI credit for leaving a real cluster unassigned
+  (e.g. a half-the-stream broad cluster), which inflated both the large fixed grids and `AdaptiveRadiusMC`.
 - `src/adaptive_dstream/plotting.py` — grid-state visualization: exact partition for `dim` 1-2, a
   cluster-projection scatter for `dim >= 3`.
 

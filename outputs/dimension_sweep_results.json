@@ -6,9 +6,10 @@
     "nmi": 0.36248472352735867,
     "purity": 0.7775,
     "fraction_unassigned": 0.72,
-    "peak_memory_bytes": 2019126,
-    "elapsed_seconds": 0.09286541599431075,
-    "throughput_pts_per_sec": 4307.308546644591,
+    "ari_assigned": 0.656498673740053,
+    "peak_memory_bytes": 2019254,
+    "elapsed_seconds": 0.0913532500007932,
+    "throughput_pts_per_sec": 4378.607219737961,
     "ari_by_phase": {
       "0": 0.3475832990538873,
       "1": 0.24880573508557538,
@@ -49,9 +50,10 @@
     "nmi": 0.03516030770418511,
     "purity": 0.585,
     "fraction_unassigned": 0.14,
-    "peak_memory_bytes": 147352,
-    "elapsed_seconds": 0.14451974999974482,
-    "throughput_pts_per_sec": 2767.787793714743,
+    "ari_assigned": 0.025684904079130925,
+    "peak_memory_bytes": 147320,
+    "elapsed_seconds": 0.14694266700007574,
+    "throughput_pts_per_sec": 2722.1501294773275,
     "ari_by_phase": {
       "0": 0.07620857950166966,
       "1": -0.004761811575768249,
@@ -86,15 +88,104 @@
     "total_cells": 136
   },
   {
+    "name": "AdaptiveRadiusMC",
+    "n_points": 400,
+    "ari": 0.3405759637025448,
+    "nmi": 0.33042696689369705,
+    "purity": 0.84,
+    "fraction_unassigned": 0.615,
+    "ari_assigned": 0.01041419315444893,
+    "peak_memory_bytes": 279378,
+    "elapsed_seconds": 0.046679000000040105,
+    "throughput_pts_per_sec": 8569.163863828624,
+    "ari_by_phase": {
+      "0": 0.3845499460131532,
+      "1": 0.7721499667491578,
+      "2": 0.2310720098955667
+    },
+    "active_cells_over_time": [
+      [
+        100,
+        43
+      ],
+      [
+        200,
+        72
+      ],
+      [
+        300,
+        85
+      ],
+      [
+        400,
+        87
+      ]
+    ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.8877803059151146,
+    "ari_recent": 0.7316052026885221,
+    "nmi_recent": 0.7279832745276877,
+    "recent_window": 100,
+    "family": "AdaptiveRadiusMC",
+    "dim": 2,
+    "n_cells_per_dim": null,
+    "total_cells": 87
+  },
+  {
+    "name": "DBSTREAM(scaled th)",
+    "n_points": 400,
+    "ari": 0.057368359223606114,
+    "nmi": 0.1559581284310157,
+    "purity": 0.715,
+    "fraction_unassigned": 0.0,
+    "ari_assigned": 0.057368359223606114,
+    "peak_memory_bytes": 16616,
+    "elapsed_seconds": 0.022161333999974886,
+    "throughput_pts_per_sec": 18049.454965141238,
+    "ari_by_phase": {
+      "0": 0.44363656280595093,
+      "1": 0.30783083802634187,
+      "2": 0.6419616140268487
+    },
+    "active_cells_over_time": [
+      [
+        100,
+        7
+      ],
+      [
+        200,
+        6
+      ],
+      [
+        300,
+        5
+      ],
+      [
+        400,
+        6
+      ]
+    ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.853461971982047,
+    "ari_recent": 0.5266451388615112,
+    "nmi_recent": 0.6193361673674207,
+    "recent_window": 100,
+    "family": "DBSTREAM_scaled",
+    "dim": 2,
+    "n_cells_per_dim": null,
+    "total_cells": 6
+  },
+  {
     "name": "FixedGrid(budget-matched)",
     "n_points": 400,
     "ari": 0.28765619061555403,
     "nmi": 0.314538632076756,
     "purity": 0.8275,
     "fraction_unassigned": 0.6325,
-    "peak_memory_bytes": 2296944,
-    "elapsed_seconds": 0.0951960000093095,
-    "throughput_pts_per_sec": 4201.857220480722,
+    "ari_assigned": -0.013666639397868786,
+    "peak_memory_bytes": 2297616,
+    "elapsed_seconds": 0.09718312499990134,
+    "throughput_pts_per_sec": 4115.940910527482,
     "ari_by_phase": {
       "0": 0.39557568228269147,
       "1": 0.5650066953659848,
@@ -135,9 +226,10 @@
     "nmi": 0.005146908811711626,
     "purity": 0.525,
     "fraction_unassigned": 0.13,
-    "peak_memory_bytes": 216536,
-    "elapsed_seconds": 0.3211442920000991,
-    "throughput_pts_per_sec": 1245.5460363588732,
+    "ari_assigned": 0.0,
+    "peak_memory_bytes": 216568,
+    "elapsed_seconds": 0.32811783399938577,
+    "throughput_pts_per_sec": 1219.0742427025432,
     "ari_by_phase": {
       "0": -0.007113878063808846,
       "1": 0.006284086968400921,
@@ -172,15 +264,104 @@
     "total_cells": 225
   },
   {
+    "name": "AdaptiveRadiusMC",
+    "n_points": 400,
+    "ari": 0.33985925449471777,
+    "nmi": 0.3691302171959775,
+    "purity": 0.835,
+    "fraction_unassigned": 0.645,
+    "ari_assigned": 0.0036398978506521516,
+    "peak_memory_bytes": 386352,
+    "elapsed_seconds": 0.052329500000269036,
+    "throughput_pts_per_sec": 7643.872003324005,
+    "ari_by_phase": {
+      "0": 0.462052693668895,
+      "1": 0.41642980377644256,
+      "2": 0.4886015991567889
+    },
+    "active_cells_over_time": [
+      [
+        100,
+        64
+      ],
+      [
+        200,
+        111
+      ],
+      [
+        300,
+        118
+      ],
+      [
+        400,
+        121
+      ]
+    ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.8866750807575572,
+    "ari_recent": 0.8467960568511941,
+    "nmi_recent": 0.7883499649263361,
+    "recent_window": 100,
+    "family": "AdaptiveRadiusMC",
+    "dim": 3,
+    "n_cells_per_dim": null,
+    "total_cells": 121
+  },
+  {
+    "name": "DBSTREAM(scaled th)",
+    "n_points": 400,
+    "ari": 0.12561017555159795,
+    "nmi": 0.2285267998200598,
+    "purity": 0.8325,
+    "fraction_unassigned": 0.0,
+    "ari_assigned": 0.12561017555159795,
+    "peak_memory_bytes": 17572,
+    "elapsed_seconds": 0.019501374999890686,
+    "throughput_pts_per_sec": 20511.374198088197,
+    "ari_by_phase": {
+      "0": 0.4877775169961135,
+      "1": 0.6979595244058054,
+      "2": 0.3284223288610094
+    },
+    "active_cells_over_time": [
+      [
+        100,
+        5
+      ],
+      [
+        200,
+        7
+      ],
+      [
+        300,
+        9
+      ],
+      [
+        400,
+        12
+      ]
+    ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.9037905836456114,
+    "ari_recent": 0.37306047548854715,
+    "nmi_recent": 0.512591776939984,
+    "recent_window": 100,
+    "family": "DBSTREAM_scaled",
+    "dim": 3,
+    "n_cells_per_dim": null,
+    "total_cells": 12
+  },
+  {
     "name": "FixedGrid(budget-matched)",
     "n_points": 400,
     "ari": 0.3626965860889993,
     "nmi": 0.3495325486864842,
     "purity": 0.8625,
     "fraction_unassigned": 0.585,
-    "peak_memory_bytes": 2087536,
-    "elapsed_seconds": 0.09083720900525805,
-    "throughput_pts_per_sec": 4403.481837237495,
+    "ari_assigned": -0.014864392942075956,
+    "peak_memory_bytes": 2088112,
+    "elapsed_seconds": 0.09238224999990052,
+    "throughput_pts_per_sec": 4329.836088647232,
     "ari_by_phase": {
       "0": 0.48545839439830646,
       "1": 0.7867259028954601,
@@ -221,9 +402,10 @@
     "nmi": 0.016209028499207384,
     "purity": 0.545,
     "fraction_unassigned": 0.1375,
+    "ari_assigned": -0.002557340013878337,
     "peak_memory_bytes": 431784,
-    "elapsed_seconds": 0.48438558299676515,
-    "throughput_pts_per_sec": 825.7884091539349,
+    "elapsed_seconds": 0.49861508300000423,
+    "throughput_pts_per_sec": 802.2220218316112,
     "ari_by_phase": {
       "0": 0.0008232993722342287,
       "1": 0.004594408467709643,
@@ -258,15 +440,104 @@
     "total_cells": 466
   },
   {
+    "name": "AdaptiveRadiusMC",
+    "n_points": 400,
+    "ari": 0.404369292290011,
+    "nmi": 0.4332512541356556,
+    "purity": 0.85,
+    "fraction_unassigned": 0.6575,
+    "ari_assigned": 0.02769930407221112,
+    "peak_memory_bytes": 447392,
+    "elapsed_seconds": 0.05466175000037765,
+    "throughput_pts_per_sec": 7317.731320296852,
+    "ari_by_phase": {
+      "0": 0.4612825228874331,
+      "1": 0.5735076467686235,
+      "2": 0.43778344697605787
+    },
+    "active_cells_over_time": [
+      [
+        100,
+        69
+      ],
+      [
+        200,
+        116
+      ],
+      [
+        300,
+        133
+      ],
+      [
+        400,
+        133
+      ]
+    ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.8942258378182468,
+    "ari_recent": 0.7721116882917585,
+    "nmi_recent": 0.7292531577230419,
+    "recent_window": 100,
+    "family": "AdaptiveRadiusMC",
+    "dim": 4,
+    "n_cells_per_dim": null,
+    "total_cells": 133
+  },
+  {
+    "name": "DBSTREAM(scaled th)",
+    "n_points": 400,
+    "ari": 0.09713498344273172,
+    "nmi": 0.1837061294750061,
+    "purity": 0.76,
+    "fraction_unassigned": 0.0,
+    "ari_assigned": 0.09713498344273172,
+    "peak_memory_bytes": 13660,
+    "elapsed_seconds": 0.015292084000066097,
+    "throughput_pts_per_sec": 26157.324273020673,
+    "ari_by_phase": {
+      "0": 0.4699540365670679,
+      "1": 0.5777851507376174,
+      "2": 0.39217922830927526
+    },
+    "active_cells_over_time": [
+      [
+        100,
+        4
+      ],
+      [
+        200,
+        6
+      ],
+      [
+        300,
+        7
+      ],
+      [
+        400,
+        7
+      ]
+    ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.863159421049609,
+    "ari_recent": 0.37736430330102066,
+    "nmi_recent": 0.4885978322483132,
+    "recent_window": 100,
+    "family": "DBSTREAM_scaled",
+    "dim": 4,
+    "n_cells_per_dim": null,
+    "total_cells": 7
+  },
+  {
     "name": "FixedGrid(budget-matched)",
     "n_points": 400,
     "ari": 0.33517017417665856,
     "nmi": 0.32144478173156077,
     "purity": 0.845,
     "fraction_unassigned": 0.61,
-    "peak_memory_bytes": 2815024,
-    "elapsed_seconds": 0.11493779199372511,
-    "throughput_pts_per_sec": 3480.143415508082,
+    "ari_assigned": -0.0017095048527832903,
+    "peak_memory_bytes": 2815728,
+    "elapsed_seconds": 0.11904183300066506,
+    "throughput_pts_per_sec": 3360.1633133267133,
     "ari_by_phase": {
       "0": 0.37464960372292977,
       "1": 0.7452462054840393,
@@ -307,9 +578,10 @@
     "nmi": 0.0045516298013542214,
     "purity": 0.52,
     "fraction_unassigned": 0.14,
-    "peak_memory_bytes": 663056,
-    "elapsed_seconds": 0.6567983330023708,
-    "throughput_pts_per_sec": 609.0149440110655,
+    "ari_assigned": 0.0,
+    "peak_memory_bytes": 663120,
+    "elapsed_seconds": 0.6803777920003995,
+    "throughput_pts_per_sec": 587.9086658956751,
     "ari_by_phase": {
       "0": -0.006900708320193032,
       "1": -0.0010898811348387316,
@@ -344,15 +616,104 @@
     "total_cells": 714
   },
   {
+    "name": "AdaptiveRadiusMC",
+    "n_points": 400,
+    "ari": 0.4160254830424086,
+    "nmi": 0.4513999670264558,
+    "purity": 0.855,
+    "fraction_unassigned": 0.665,
+    "ari_assigned": 0.0,
+    "peak_memory_bytes": 489672,
+    "elapsed_seconds": 0.056131125000320026,
+    "throughput_pts_per_sec": 7126.171085965575,
+    "ari_by_phase": {
+      "0": 0.34833699146307273,
+      "1": 0.6692549862207483,
+      "2": 0.5098889582879137
+    },
+    "active_cells_over_time": [
+      [
+        100,
+        63
+      ],
+      [
+        200,
+        123
+      ],
+      [
+        300,
+        133
+      ],
+      [
+        400,
+        139
+      ]
+    ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.9186547747325443,
+    "ari_recent": 0.9599978058178152,
+    "nmi_recent": 0.9290195959211138,
+    "recent_window": 100,
+    "family": "AdaptiveRadiusMC",
+    "dim": 5,
+    "n_cells_per_dim": null,
+    "total_cells": 139
+  },
+  {
+    "name": "DBSTREAM(scaled th)",
+    "n_points": 400,
+    "ari": 0.038504516683518106,
+    "nmi": 0.07499116109266206,
+    "purity": 0.6325,
+    "fraction_unassigned": 0.0,
+    "ari_assigned": 0.038504516683518106,
+    "peak_memory_bytes": 11395,
+    "elapsed_seconds": 0.012578042000313872,
+    "throughput_pts_per_sec": 31801.45208531013,
+    "ari_by_phase": {
+      "0": 0.4825941655154634,
+      "1": 0.30506544464986396,
+      "2": 0.6372256538535593
+    },
+    "active_cells_over_time": [
+      [
+        100,
+        3
+      ],
+      [
+        200,
+        4
+      ],
+      [
+        300,
+        6
+      ],
+      [
+        400,
+        5
+      ]
+    ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.8538807200394567,
+    "ari_recent": 0.6242333210006294,
+    "nmi_recent": 0.6780084866372009,
+    "recent_window": 100,
+    "family": "DBSTREAM_scaled",
+    "dim": 5,
+    "n_cells_per_dim": null,
+    "total_cells": 5
+  },
+  {
     "name": "FixedGrid(budget-matched)",
     "n_points": 400,
     "ari": 0.481733132155171,
     "nmi": 0.3938168365847052,
     "purity": 0.8475,
     "fraction_unassigned": 0.54,
-    "peak_memory_bytes": 3820000,
-    "elapsed_seconds": 0.18650816699664574,
-    "throughput_pts_per_sec": 2144.6782006451963,
+    "ari_assigned": 0.0,
+    "peak_memory_bytes": 3820768,
+    "elapsed_seconds": 0.19373608299974876,
+    "throughput_pts_per_sec": 2064.6644332151523,
     "ari_by_phase": {
       "0": 0.33018391047317025,
       "1": 0.6691338226526039,
@@ -393,9 +754,10 @@
     "nmi": 0.07334841041196333,
     "purity": 0.635,
     "fraction_unassigned": 0.2475,
-    "peak_memory_bytes": 895296,
-    "elapsed_seconds": 0.9610896249942016,
-    "throughput_pts_per_sec": 416.1942753282903,
+    "ari_assigned": 0.0,
+    "peak_memory_bytes": 895808,
+    "elapsed_seconds": 0.9680423330000849,
+    "throughput_pts_per_sec": 413.2050700307183,
     "ari_by_phase": {
       "0": 0.005267793793266269,
       "1": 0.1266662952884073,
@@ -430,15 +792,104 @@
     "total_cells": 946
   },
   {
+    "name": "AdaptiveRadiusMC",
+    "n_points": 400,
+    "ari": 0.3203416958994683,
+    "nmi": 0.4001044880519282,
+    "purity": 0.8225,
+    "fraction_unassigned": 0.665,
+    "ari_assigned": 0.0,
+    "peak_memory_bytes": 505785,
+    "elapsed_seconds": 0.053987207999853126,
+    "throughput_pts_per_sec": 7409.162555712979,
+    "ari_by_phase": {
+      "0": 0.26369029377542913,
+      "1": 0.44349141321702557,
+      "2": 0.5531793918044321
+    },
+    "active_cells_over_time": [
+      [
+        100,
+        55
+      ],
+      [
+        200,
+        105
+      ],
+      [
+        300,
+        131
+      ],
+      [
+        400,
+        142
+      ]
+    ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.8940661809131952,
+    "ari_recent": 0.8448573745636614,
+    "nmi_recent": 0.7945931471925834,
+    "recent_window": 100,
+    "family": "AdaptiveRadiusMC",
+    "dim": 6,
+    "n_cells_per_dim": null,
+    "total_cells": 142
+  },
+  {
+    "name": "DBSTREAM(scaled th)",
+    "n_points": 400,
+    "ari": 0.02379534865560022,
+    "nmi": 0.06816929608018536,
+    "purity": 0.6475,
+    "fraction_unassigned": 0.0,
+    "ari_assigned": 0.02379534865560022,
+    "peak_memory_bytes": 14992,
+    "elapsed_seconds": 0.013165375000426138,
+    "throughput_pts_per_sec": 30382.727418478604,
+    "ari_by_phase": {
+      "0": 0.4176535885501281,
+      "1": 0.7132408440067609,
+      "2": 0.1943488046059295
+    },
+    "active_cells_over_time": [
+      [
+        100,
+        3
+      ],
+      [
+        200,
+        4
+      ],
+      [
+        300,
+        6
+      ],
+      [
+        400,
+        6
+      ]
+    ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.726114844376539,
+    "ari_recent": 0.18103651423925723,
+    "nmi_recent": 0.3272206602064442,
+    "recent_window": 100,
+    "family": "DBSTREAM_scaled",
+    "dim": 6,
+    "n_cells_per_dim": null,
+    "total_cells": 6
+  },
+  {
     "name": "FixedGrid(budget-matched)",
     "n_points": 400,
     "ari": 0.4410387970249679,
     "nmi": 0.35102601246960646,
     "purity": 0.835,
     "fraction_unassigned": 0.5175,
-    "peak_memory_bytes": 6539080,
-    "elapsed_seconds": 0.2549679170042509,
-    "throughput_pts_per_sec": 1568.8248337273394,
+    "ari_assigned": 0.09305896424855029,
+    "peak_memory_bytes": 6539912,
+    "elapsed_seconds": 0.2556419160000587,
+    "throughput_pts_per_sec": 1564.6886326728522,
     "ari_by_phase": {
       "0": 0.31691318911539934,
       "1": 0.772161179691167,
@@ -479,9 +930,10 @@
     "nmi": 0.1706615700863848,
     "purity": 0.7525,
     "fraction_unassigned": 0.4525,
-    "peak_memory_bytes": 1547024,
-    "elapsed_seconds": 1.0610914589924505,
-    "throughput_pts_per_sec": 376.97033239699834,
+    "ari_assigned": 0.10474006387160921,
+    "peak_memory_bytes": 1547536,
+    "elapsed_seconds": 1.0666985420002675,
+    "throughput_pts_per_sec": 374.9887941628964,
     "ari_by_phase": {
       "0": 0.2563995337136738,
       "1": 0.3130174918736167,
@@ -516,15 +968,104 @@
     "total_cells": 1531
   },
   {
+    "name": "AdaptiveRadiusMC",
+    "n_points": 400,
+    "ari": 0.3038607356374799,
+    "nmi": 0.38790298775970516,
+    "purity": 0.815,
+    "fraction_unassigned": 0.6775,
+    "ari_assigned": 0.0,
+    "peak_memory_bytes": 560448,
+    "elapsed_seconds": 0.05456937500002823,
+    "throughput_pts_per_sec": 7330.118770826916,
+    "ari_by_phase": {
+      "0": 0.26311471833136973,
+      "1": 0.42358340419037654,
+      "2": 0.5082647265300912
+    },
+    "active_cells_over_time": [
+      [
+        100,
+        51
+      ],
+      [
+        200,
+        106
+      ],
+      [
+        300,
+        133
+      ],
+      [
+        400,
+        149
+      ]
+    ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.8910502809157379,
+    "ari_recent": 0.7720725057296194,
+    "nmi_recent": 0.7241647340480702,
+    "recent_window": 100,
+    "family": "AdaptiveRadiusMC",
+    "dim": 8,
+    "n_cells_per_dim": null,
+    "total_cells": 149
+  },
+  {
+    "name": "DBSTREAM(scaled th)",
+    "n_points": 400,
+    "ari": 0.2178039158128421,
+    "nmi": 0.2106451978692354,
+    "purity": 0.7975,
+    "fraction_unassigned": 0.0,
+    "ari_assigned": 0.2178039158128421,
+    "peak_memory_bytes": 11204,
+    "elapsed_seconds": 0.012623832999452134,
+    "throughput_pts_per_sec": 31686.097242997414,
+    "ari_by_phase": {
+      "0": 0.3493274918012258,
+      "1": 0.6679995956667815,
+      "2": 0.49458780467515184
+    },
+    "active_cells_over_time": [
+      [
+        100,
+        4
+      ],
+      [
+        200,
+        2
+      ],
+      [
+        300,
+        4
+      ],
+      [
+        400,
+        4
+      ]
+    ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.8412895004411605,
+    "ari_recent": 0.5749375356235146,
+    "nmi_recent": 0.6694714062454229,
+    "recent_window": 100,
+    "family": "DBSTREAM_scaled",
+    "dim": 8,
+    "n_cells_per_dim": null,
+    "total_cells": 4
+  },
+  {
     "name": "FixedGrid(budget-matched)",
     "n_points": 400,
     "ari": 0.006786036942290098,
     "nmi": 0.11556679889770057,
     "purity": 0.5825,
     "fraction_unassigned": 0.8675,
-    "peak_memory_bytes": 1088168,
-    "elapsed_seconds": 0.12830766699335072,
-    "throughput_pts_per_sec": 3117.5066102692767,
+    "ari_assigned": 0.045427094875199824,
+    "peak_memory_bytes": 1089000,
+    "elapsed_seconds": 0.13078279199999088,
+    "throughput_pts_per_sec": 3058.5063515085985,
     "ari_by_phase": {
       "0": 0.008533728546158626,
       "1": -0.0033981375592223493,
@@ -565,9 +1106,10 @@
     "nmi": 0.15685301622399855,
     "purity": 0.66,
     "fraction_unassigned": 0.725,
-    "peak_memory_bytes": 1311672,
-    "elapsed_seconds": 3.5631489579973277,
-    "throughput_pts_per_sec": 112.26025201731126,
+    "ari_assigned": 0.09416942670534083,
+    "peak_memory_bytes": 1312184,
+    "elapsed_seconds": 3.6642275000003792,
+    "throughput_pts_per_sec": 109.16352764667549,
     "ari_by_phase": {
       "0": 0.022143566842699147,
       "1": 0.02087174026540972,
@@ -602,15 +1144,104 @@
     "total_cells": 1024
   },
   {
+    "name": "AdaptiveRadiusMC",
+    "n_points": 400,
+    "ari": 0.25335525847827267,
+    "nmi": 0.3624869266885374,
+    "purity": 0.7925,
+    "fraction_unassigned": 0.6725,
+    "ari_assigned": 0.0,
+    "peak_memory_bytes": 480369,
+    "elapsed_seconds": 0.054922000000260596,
+    "throughput_pts_per_sec": 7283.055970250574,
+    "ari_by_phase": {
+      "0": 0.24880573508557538,
+      "1": 0.46395780425864425,
+      "2": 0.3174137043500206
+    },
+    "active_cells_over_time": [
+      [
+        100,
+        57
+      ],
+      [
+        200,
+        114
+      ],
+      [
+        300,
+        134
+      ],
+      [
+        400,
+        135
+      ]
+    ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.8375052943159783,
+    "ari_recent": 0.513657303929177,
+    "nmi_recent": 0.5334195889944688,
+    "recent_window": 100,
+    "family": "AdaptiveRadiusMC",
+    "dim": 10,
+    "n_cells_per_dim": null,
+    "total_cells": 135
+  },
+  {
+    "name": "DBSTREAM(scaled th)",
+    "n_points": 400,
+    "ari": 0.03684575143026056,
+    "nmi": 0.06903134619867292,
+    "purity": 0.615,
+    "fraction_unassigned": 0.0,
+    "ari_assigned": 0.03684575143026056,
+    "peak_memory_bytes": 12036,
+    "elapsed_seconds": 0.012513833999946655,
+    "throughput_pts_per_sec": 31964.62411133991,
+    "ari_by_phase": {
+      "0": 0.2703173764562988,
+      "1": 0.7794191990114026,
+      "2": 0.7137103835677168
+    },
+    "active_cells_over_time": [
+      [
+        100,
+        1
+      ],
+      [
+        200,
+        3
+      ],
+      [
+        300,
+        3
+      ],
+      [
+        400,
+        5
+      ]
+    ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.8466002719505362,
+    "ari_recent": 0.764480612263751,
+    "nmi_recent": 0.7674089205061544,
+    "recent_window": 100,
+    "family": "DBSTREAM_scaled",
+    "dim": 10,
+    "n_cells_per_dim": null,
+    "total_cells": 5
+  },
+  {
     "name": "FixedGrid(budget-matched)",
     "n_points": 400,
     "ari": 0.20519124472946595,
     "nmi": 0.26979237512281873,
     "purity": 0.7275,
     "fraction_unassigned": 0.7325,
-    "peak_memory_bytes": 4606168,
-    "elapsed_seconds": 0.314414708991535,
-    "throughput_pts_per_sec": 1272.2051117868318,
+    "ari_assigned": 0.0,
+    "peak_memory_bytes": 4606952,
+    "elapsed_seconds": 0.32208162499955506,
+    "throughput_pts_per_sec": 1241.92120553463,
     "ari_by_phase": {
       "0": 0.17423594509530457,
       "1": 0.21922424832103032,
@@ -651,9 +1282,10 @@
     "nmi": 0.010688724768074821,
     "purity": 0.52,
     "fraction_unassigned": 0.125,
+    "ari_assigned": 0.0,
     "peak_memory_bytes": 7398,
-    "elapsed_seconds": 0.006317583000054583,
-    "throughput_pts_per_sec": 63315.353355317064,
+    "elapsed_seconds": 0.006604125000194472,
+    "throughput_pts_per_sec": 60568.20547585353,
     "ari_by_phase": {
       "0": -0.006320395151816135,
       "1": 0.0,
@@ -688,15 +1320,104 @@
     "total_cells": 1
   },
   {
+    "name": "AdaptiveRadiusMC",
+    "n_points": 400,
+    "ari": 0.22683111710414366,
+    "nmi": 0.33891114870941386,
+    "purity": 0.775,
+    "fraction_unassigned": 0.705,
+    "ari_assigned": 0.0,
+    "peak_memory_bytes": 569960,
+    "elapsed_seconds": 0.05695670900058758,
+    "throughput_pts_per_sec": 7022.877673565611,
+    "ari_by_phase": {
+      "0": 0.11317084173280517,
+      "1": 0.404277636258961,
+      "2": 0.42747906258377916
+    },
+    "active_cells_over_time": [
+      [
+        100,
+        53
+      ],
+      [
+        200,
+        112
+      ],
+      [
+        300,
+        148
+      ],
+      [
+        400,
+        149
+      ]
+    ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.8700335722277811,
+    "ari_recent": 0.7721314419105764,
+    "nmi_recent": 0.7287008798015754,
+    "recent_window": 100,
+    "family": "AdaptiveRadiusMC",
+    "dim": 12,
+    "n_cells_per_dim": null,
+    "total_cells": 149
+  },
+  {
+    "name": "DBSTREAM(scaled th)",
+    "n_points": 400,
+    "ari": 0.044515830082387256,
+    "nmi": 0.08113761271913424,
+    "purity": 0.6325,
+    "fraction_unassigned": 0.0,
+    "ari_assigned": 0.044515830082387256,
+    "peak_memory_bytes": 16568,
+    "elapsed_seconds": 0.013654249999490276,
+    "throughput_pts_per_sec": 29294.90817986578,
+    "ari_by_phase": {
+      "0": 0.3009800920229852,
+      "1": 0.6655548731943031,
+      "2": 0.6418247760305302
+    },
+    "active_cells_over_time": [
+      [
+        100,
+        2
+      ],
+      [
+        200,
+        2
+      ],
+      [
+        300,
+        3
+      ],
+      [
+        400,
+        3
+      ]
+    ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.8611351004824173,
+    "ari_recent": 0.6947884723251463,
+    "nmi_recent": 0.7201623740993012,
+    "recent_window": 100,
+    "family": "DBSTREAM_scaled",
+    "dim": 12,
+    "n_cells_per_dim": null,
+    "total_cells": 3
+  },
+  {
     "name": "FixedGrid(budget-matched)",
     "n_points": 400,
     "ari": 0.02160136339761886,
     "nmi": 0.1051647662770115,
     "purity": 0.585,
     "fraction_unassigned": 0.93,
-    "peak_memory_bytes": 40029032,
-    "elapsed_seconds": 1.4014257499948144,
-    "throughput_pts_per_sec": 285.42361234726854,
+    "ari_assigned": 0.0,
+    "peak_memory_bytes": 40029192,
+    "elapsed_seconds": 1.444542334000289,
+    "throughput_pts_per_sec": 276.9043112030526,
     "ari_by_phase": {
       "0": 0.05296114544767016,
       "1": 0.034892224183163005,
@@ -737,9 +1458,10 @@
     "nmi": 0.00389195165028878,
     "purity": 0.515,
     "fraction_unassigned": 0.125,
+    "ari_assigned": 0.0,
     "peak_memory_bytes": 7438,
-    "elapsed_seconds": 0.006457583003793843,
-    "throughput_pts_per_sec": 61942.680375149524,
+    "elapsed_seconds": 0.006434583999180177,
+    "throughput_pts_per_sec": 62164.080856037246,
     "ari_by_phase": {
       "0": -0.006438941388185913,
       "1": 0.0,
@@ -774,15 +1496,104 @@
     "total_cells": 1
   },
   {
+    "name": "AdaptiveRadiusMC",
+    "n_points": 400,
+    "ari": 0.25742701288014885,
+    "nmi": 0.3464239605668855,
+    "purity": 0.7875,
+    "fraction_unassigned": 0.7275,
+    "ari_assigned": 0.0,
+    "peak_memory_bytes": 569497,
+    "elapsed_seconds": 0.058351375000711414,
+    "throughput_pts_per_sec": 6855.022696468133,
+    "ari_by_phase": {
+      "0": 0.3840733829139109,
+      "1": 0.28102734670615603,
+      "2": 0.16856958782882797
+    },
+    "active_cells_over_time": [
+      [
+        100,
+        68
+      ],
+      [
+        200,
+        133
+      ],
+      [
+        300,
+        145
+      ],
+      [
+        400,
+        134
+      ]
+    ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.8202205364417932,
+    "ari_recent": 0.3362355457618846,
+    "nmi_recent": 0.4410544298701552,
+    "recent_window": 100,
+    "family": "AdaptiveRadiusMC",
+    "dim": 15,
+    "n_cells_per_dim": null,
+    "total_cells": 134
+  },
+  {
+    "name": "DBSTREAM(scaled th)",
+    "n_points": 400,
+    "ari": 0.08554269324232604,
+    "nmi": 0.0960781952643054,
+    "purity": 0.66,
+    "fraction_unassigned": 0.0,
+    "ari_assigned": 0.08554269324232604,
+    "peak_memory_bytes": 16976,
+    "elapsed_seconds": 0.015080000000125438,
+    "throughput_pts_per_sec": 26525.198938771402,
+    "ari_by_phase": {
+      "0": 0.18150336265399683,
+      "1": 0.7290705717312173,
+      "2": 0.7582403284005699
+    },
+    "active_cells_over_time": [
+      [
+        100,
+        3
+      ],
+      [
+        200,
+        4
+      ],
+      [
+        300,
+        3
+      ],
+      [
+        400,
+        4
+      ]
+    ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.8654519273859618,
+    "ari_recent": 0.7848481423473754,
+    "nmi_recent": 0.7712878797190101,
+    "recent_window": 100,
+    "family": "DBSTREAM_scaled",
+    "dim": 15,
+    "n_cells_per_dim": null,
+    "total_cells": 4
+  },
+  {
     "name": "AdaptiveDStream",
     "n_points": 400,
     "ari": -0.0012226678401467202,
     "nmi": 5.345538341343238e-05,
     "purity": 0.51,
     "fraction_unassigned": 0.125,
+    "ari_assigned": 0.0,
     "peak_memory_bytes": 7562,
-    "elapsed_seconds": 0.006350875002681278,
-    "throughput_pts_per_sec": 62983.44713620153,
+    "elapsed_seconds": 0.006502125000224623,
+    "throughput_pts_per_sec": 61518.349768142194,
     "ari_by_phase": {
       "0": -0.003073956566501412,
       "1": 0.0,
@@ -815,5 +1626,93 @@
     "dim": 20,
     "n_cells_per_dim": null,
     "total_cells": 1
+  },
+  {
+    "name": "AdaptiveRadiusMC",
+    "n_points": 400,
+    "ari": 0.3391745295448727,
+    "nmi": 0.40105302559237643,
+    "purity": 0.82,
+    "fraction_unassigned": 0.69,
+    "ari_assigned": 0.0,
+    "peak_memory_bytes": 537609,
+    "elapsed_seconds": 0.057643333999294555,
+    "throughput_pts_per_sec": 6939.223883283629,
+    "ari_by_phase": {
+      "0": 0.27910010116895967,
+      "1": 0.5064351651966529,
+      "2": 0.44714028911752357
+    },
+    "active_cells_over_time": [
+      [
+        100,
+        64
+      ],
+      [
+        200,
+        128
+      ],
+      [
+        300,
+        140
+      ],
+      [
+        400,
+        133
+      ]
+    ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.8756068263063955,
+    "ari_recent": 0.7721463199647421,
+    "nmi_recent": 0.7262071307338945,
+    "recent_window": 100,
+    "family": "AdaptiveRadiusMC",
+    "dim": 20,
+    "n_cells_per_dim": null,
+    "total_cells": 133
+  },
+  {
+    "name": "DBSTREAM(scaled th)",
+    "n_points": 400,
+    "ari": 0.08234868223873308,
+    "nmi": 0.09217262551325667,
+    "purity": 0.6675,
+    "fraction_unassigned": 0.0,
+    "ari_assigned": 0.08234868223873308,
+    "peak_memory_bytes": 18552,
+    "elapsed_seconds": 0.017022832999828097,
+    "throughput_pts_per_sec": 23497.851386078884,
+    "ari_by_phase": {
+      "0": 0.07073513747459173,
+      "1": 0.8188835101205263,
+      "2": 0.6166394279828513
+    },
+    "active_cells_over_time": [
+      [
+        100,
+        2
+      ],
+      [
+        200,
+        2
+      ],
+      [
+        300,
+        4
+      ],
+      [
+        400,
+        4
+      ]
+    ],
+    "eval_decay": 0.99,
+    "decayed_purity": 0.8405687136509191,
+    "ari_recent": 0.6768317524845237,
+    "nmi_recent": 0.7341187345785024,
+    "recent_window": 100,
+    "family": "DBSTREAM_scaled",
+    "dim": 20,
+    "n_cells_per_dim": null,
+    "total_cells": 4
   }
 ]

@@ -33,7 +33,10 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from adaptive_dstream import AdaptiveDStream, FixedGridDStream, make_river_baselines, run_stream_eval
+from river import cluster as river_cluster
+
+from adaptive_dstream import (AdaptiveDStream, AdaptiveRadiusMC, FixedGridDStream, RiverClusterAdapter,
+                              make_river_baselines, run_stream_eval)
 from adaptive_dstream.logging_utils import configure_run_logging, get_logger
 from adaptive_dstream.real_data import load
 
@@ -55,6 +58,11 @@ SEED = 7
 GRID_RESOLUTIONS = [2, 3, 4, 6]
 GRID_CELL_CAP = 10_000
 ADAPTIVE_MAX_CELLS = [300, 800, 2000, 6000]
+# Branch adaptive-radius-microclusters: features are scaled to [0,1]^DIM, so the one
+# distance-scale knob of the new model (and of its DBSTREAM control) is swept over
+# the same range, as the grid methods are swept over their own budget knobs.
+MC_INIT_RADII = [0.05, 0.1, 0.2, 0.35, 0.5]
+DBSTREAM_THRESHOLDS = [0.05, 0.1, 0.2, 0.35, 0.5]
 DEGENERACY_DIMS = [10, 12, 15, 20]  # AdaptiveDStream cannot split past the root once 2**dim > max_cells
 DEGENERACY_DATASETS = ["kddcup99"]  # covtype/sensor have <=10 numeric features, so higher "dim" is not actually reached there
 
@@ -102,6 +110,25 @@ def eval_dataset(name: str) -> tuple[list[dict], dict]:
               f"mem={r.peak_memory_bytes/1024:.0f}KB  leaves={leaves}  "
               f"[{time.perf_counter()-t0:.0f}s]")
 
+    # AdaptiveRadiusMC frontier (swept over its radius scale) and the DBSTREAM
+    # global-threshold control swept over the same values
+    for ir in MC_INIT_RADII:
+        factory = lambda ir=ir: AdaptiveRadiusMC(init_radius=ir, max_radius=6 * ir, min_radius=ir / 20,
+                                                 maintenance_interval=100)
+        r = run_stream_eval(factory, X, y, name=f"AdaptiveRadiusMC(r0={ir})")
+        rows.append({**r.to_dict(), "family": "AdaptiveRadiusMC", "param": ir,
+                     "micro": r.active_cells_over_time[-1][1]})
+        log.info(f"  AdaptiveRadiusMC r0={ir:<5} ARI={r.ari:.3f}  NMI={r.nmi:.3f}  ARI_assigned={r.ari_assigned}  "
+                 f"mem={r.peak_memory_bytes/1024:.0f}KB  micro={r.active_cells_over_time[-1][1]}  "
+                 f"unassigned={r.fraction_unassigned:.2f}")
+    for th in DBSTREAM_THRESHOLDS:
+        factory = lambda th=th: RiverClusterAdapter(
+            river_cluster.DBSTREAM(clustering_threshold=th, fading_factor=0.01,
+                                   cleanup_interval=2, intersection_factor=0.3), name="DBSTREAM")
+        r = run_stream_eval(factory, X, y, name=f"DBSTREAM(th={th})")
+        rows.append({**r.to_dict(), "family": "DBSTREAM_sweep", "param": th})
+        log.info(f"  DBSTREAM th={th:<5} ARI={r.ari:.3f}  NMI={r.nmi:.3f}  mem={r.peak_memory_bytes/1024:.0f}KB")
+
     # river baselines as single points
     for bname, adapter in make_river_baselines(seed=SEED).items():
         factory = (lambda a=adapter: a)
@@ -129,8 +156,16 @@ def degeneracy_check(name: str) -> list[dict]:
             max_depth=7, max_cells=4000, merge_threshold=0.01, merge_min_age=200)
         r = run_stream_eval(factory, X, y, name=f"AdaptiveDStream d={d}")
         leaves = r.active_cells_over_time[-1][1]
-        out.append({"dataset": meta["dataset"], "dim": d, "ari": r.ari,
+        out.append({"dataset": meta["dataset"], "dim": d, "model": "AdaptiveDStream", "ari": r.ari,
                     "leaves": leaves, "peak_memory_bytes": r.peak_memory_bytes})
+        # same check for the new model: scale-aware radius, no 2**d wall expected
+        mc = lambda d=d: AdaptiveRadiusMC(init_radius=0.1 * np.sqrt(d), max_radius=0.6 * np.sqrt(d),
+                                          min_radius=0.005 * np.sqrt(d), maintenance_interval=100)
+        rm = run_stream_eval(mc, X, y, name=f"AdaptiveRadiusMC d={d}")
+        out.append({"dataset": meta["dataset"], "dim": d, "model": "AdaptiveRadiusMC", "ari": rm.ari,
+                    "leaves": rm.active_cells_over_time[-1][1], "peak_memory_bytes": rm.peak_memory_bytes})
+        log.info(f"  {meta['dataset']:<16} d={d:>2}  AdaptiveRadiusMC  ARI={rm.ari:.3f}  "
+                 f"micro={rm.active_cells_over_time[-1][1]}  mem={rm.peak_memory_bytes/1024:.0f}KB")
         log.info(f"  {meta['dataset']:<16} d={d:>2}  AdaptiveDStream  ARI={r.ari:.3f}  leaves={leaves}"
               f"{'  (never split past root: 2**d > max_cells)' if leaves == 1 else ''}")
     return out
@@ -141,7 +176,9 @@ def plot(all_rows: dict, metric: str, ylabel: str, fname: str) -> None:
     for ax, name in zip(axes[0], DATASETS):
         rows = all_rows[name]
         for fam, color, marker in [("D-Stream", "tab:blue", "o"),
-                                    ("AdaptiveDStream", "tab:red", "*")]:
+                                    ("AdaptiveDStream", "tab:gray", "*"),
+                                    ("AdaptiveRadiusMC", "tab:red", "D"),
+                                    ("DBSTREAM_sweep", "tab:pink", "v")]:
             fam_rows = sorted((r for r in rows if r["family"] == fam),
                                key=lambda r: r["peak_memory_bytes"])
             if fam_rows:
